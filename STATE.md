@@ -230,8 +230,10 @@ what the tool is understood to do, not merely how pleasant it is to live with.
   therefore two independent states by design, so the two are not obliged to move
   together; what is not known is which one was cooling at the moment of the
   second block, and why the arrangement survived the first cycle and not the
-  second. state.json is the place to look, read while it is happening rather than
-  after.
+  second. Nothing was written down while it happened and the user no longer
+  recalls whether the game opened before the second block or never opened at all,
+  which are different faults; so this one gets reproduced, not asked about again.
+  state.json is the place to look, read while it is happening rather than after.
 - Why protecting VALORANT.exe alone does not stop the game. It is the first link
   in the chain, and terminating it evidently does not prevent
   VALORANT-Win64-Shipping.exe from starting or continuing. The Riot Client is
