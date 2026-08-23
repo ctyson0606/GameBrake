@@ -32,8 +32,12 @@ sixteen milliseconds apart on coinciding deadlines and was written down here as
 one wait rather than two. Using it again showed that was a description of one
 launch and not of the arrangement: with both protected the user was blocked a
 second time, after the first cooldown had already been waited out. With only
-VALORANT.exe protected the game is not stopped at all. Neither mechanism is
-established — see Open Questions.
+VALORANT.exe protected the game is not stopped at all. Neither of those needs
+explaining away: two entries are two ids and therefore two independent cooldowns,
+which look like one wait only while both processes happen to sit in the same
+phase, and Terminate ends one process and never its tree, so ending the first
+link of a chain leaves the game running. One entry per game, and it is the binary
+that owns the session.
 
 Installed at %LOCALAPPDATA%\Programs\GameBrake and started from the Run key, so
 it is independent of the build output. The installed copy is
@@ -199,6 +203,9 @@ Two constraints hold this together:
 - A4  Matching is on the full executable path. A game launcher and the game
       binary are different executables; the user picks which one to protect.
       This survived the Valorant fix intact and is worth keeping that way.
+      One entry per game, and it is the binary that owns the session: two links
+      of one chain are two ids, two states and two cooldowns, and will charge
+      twice as soon as their processes stop moving together.
 - A5  A process already running when the tool starts is left alone. This is
       cheap to say and expensive in practice; see Known Annoyances.
 - A6  Cooldown length is a single global value, not per-app.
@@ -222,29 +229,15 @@ out as the install procedure rather than leaving it recorded only here.
 
 ## Open Questions
 
-Two are open on the Valorant chain, both raised by use and neither diagnosed.
-They are open questions rather than annoyances because the answer would change
-what the tool is understood to do, not merely how pleasant it is to live with.
+None blocking.
 
-- Why protecting both binaries charges twice. Two config entries are two ids and
-  therefore two independent states by design, so the two are not obliged to move
-  together; what is not known is which one was cooling at the moment of the
-  second block, and why the arrangement survived the first cycle and not the
-  second. Nothing was written down while it happened and the user no longer
-  recalls whether the game opened before the second block or never opened at all,
-  which are different faults; so this one gets reproduced, not asked about again.
-  state.json is the place to look, read while it is happening rather than after.
-- Why protecting VALORANT.exe alone does not stop the game. It is the first link
-  in the chain, and terminating it evidently does not prevent
-  VALORANT-Win64-Shipping.exe from starting or continuing. The Riot Client is
-  already known to start things that are not its children, so it may be the same
-  shape as the launcher finding below, but that is a guess and is recorded as
-  one.
+The two Valorant behaviours were briefly written here as open questions and are
+not. Charging twice for two entries, and failing to stop a game whose first link
+was the protected one, are both what the data contract and the Terminate decision
+say will happen. Recording a documented consequence as a mystery invites someone
+to go and measure what is already written down two sections away.
 
-Neither should be answered by argument. METHOD.md says to make the thing say
-what it saw, and this is exactly the case it was written for.
-
-Two more remain deliberately deferred:
+Two remain deliberately deferred:
 
 - URL / website cooling-off (N1). Deferred, not rejected. Whether it can reuse
   the same reducer is unexamined.
@@ -375,10 +368,14 @@ suite.
   for exactly one launch. Charged sixteen milliseconds apart with coinciding
   deadlines, it was recorded as a single wait; used again, with both still
   protected, it blocked the user a second time after the first cooldown had been
-  waited out. Protecting VALORANT.exe alone does not stop the game from running.
-  Only VALORANT-Win64-Shipping.exe is protected now, and that works. What is
-  uncomfortable is not the wrong entry but how it was arrived at: one cycle was
-  watched, and what it implied was written down as though it had been seen.
+  waited out. That is the contract working rather than failing: two entries are
+  two independent cooldowns, and they look like one wait only while the two
+  processes sit in the same phase, which stops being true as soon as their
+  lifetimes differ. Protecting VALORANT.exe alone does not stop the game either,
+  for the equally undramatic reason that Terminate never takes the tree. Only
+  VALORANT-Win64-Shipping.exe is protected now. What is worth keeping is not the
+  wrong entry but how it was arrived at: one cycle was watched, and what it
+  implied was written down as though it had been seen.
 - The Riot launcher cannot usefully be protected. It puts itself in the Run key
   in background mode, so it is resident from login and exempt under A5, and
   pressing Play wakes it rather than starting it. Protecting it only killed

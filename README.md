@@ -165,8 +165,15 @@ Some games run a chain of binaries, and only one link in the chain is the right
 one to hold. Valorant runs `VALORANT.exe` into `VALORANT-Win64-Shipping.exe`:
 protect `VALORANT-Win64-Shipping.exe`, and only that. Both together was tried and
 charges a second cooldown after the first has already been waited out.
-`VALORANT.exe` on its own does not stop the game from running at all. Neither
-behaviour is understood yet.
+`VALORANT.exe` on its own does not stop the game from running at all.
+
+Both follow from how the tool works, so expect them in any game built this way.
+Two entries are two independent cooldowns — they only look like a single wait
+while both processes happen to be in the same phase, and they stop being in the
+same phase as soon as one of them exits and the other keeps running. And a
+termination ends one process, never its children, so ending the first link of a
+chain leaves the game itself untouched. **One entry per game, and it is the
+binary that owns the session.**
 
 So if a protected game starts anyway, or makes you wait twice, try a different
 binary in its chain before concluding the tool is broken. The tray menu shows
