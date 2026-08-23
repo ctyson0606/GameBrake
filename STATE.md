@@ -153,9 +153,9 @@ Done: the solution scaffold, the reducer, the two stores, and their tests.
 AGENTS.md Environment facts carry install, test and build, each having been run.
 
 1. Watcher: emit LaunchAttempt on every process start, and ProcessExited.
-   Windows-facing, so a separate net10.0-windows project. Whether WMI or ETW can
-   see a launch inside the 2 s AC1 allows is the largest unverified assumption
-   in the project, so probe that before building anything on top of it.
+   Windows-facing, so a separate net10.0-windows project. The mechanism is now
+   settled by measurement, but building it is blocked on the two Open Questions,
+   because both change what matching has to do.
 2. Enforcer: carry out Terminate.
 3. Tray host: wire the four together, show remaining time (AC8), start with the
    session (G5).
@@ -165,12 +165,43 @@ AGENTS.md Environment facts carry install, test and build, each having been run.
 
 ## Open Questions
 
-None blocking. Two deliberately deferred:
+Two are blocking, both raised by the watcher probe, neither answerable without a
+decision from the user. See Recent Findings for the measurements behind them.
+
+- AC1 names notepad.exe, which on Windows 11 is an app execution alias rather
+  than a program. The criterion needs a plain executable as its subject, or it
+  passes while the window it was meant to close stays open.
+- Packaged applications, which is everything installed through Game Pass, live
+  under WindowsApps at a path carrying a version number that moves on update.
+  Full-path matching (A4) does not survive that. Whether v1 covers them at all
+  is a scope decision, not an implementation one.
+
+Two remain deliberately deferred:
 
 - URL / website cooling-off (N1). Deferred, not rejected. Whether it can reuse
   the same reducer is unexamined.
 - Hardening to a SYSTEM service (N7). Revisit only if user-mode friction turns
   out to be insufficient in practice — a question about the user, not the code.
+
+## Recent Findings
+
+Measured 2026-08-23 by a throwaway probe, unelevated, on this machine only.
+Six launches per configuration on an idle machine; nothing here says anything
+about a loaded one.
+
+- Win32_ProcessStartTrace raises "Access denied" unelevated. The unelevated
+  route is __InstanceCreationEvent WITHIN 1, which works and does carry
+  ExecutablePath. The user-mode decision settles the mechanism, it does not
+  block it.
+- Detection latency for a plain executable: median 347 ms, max 920 ms, against
+  the 2 s AC1 allows.
+- WITHIN 0.5 measured slower than WITHIN 1, not faster. Leave it at 1.
+- The 1270 to 1521 ms first seen for notepad was the packaged-app launch chain,
+  not WMI. It is not evidence about the watcher.
+- Idle cost is NOT established. Attributing CPU to the subscription produced a
+  negative delta, which means the cost sits under the run-to-run noise of
+  background WMI activity in the host processes. That is not the same as zero.
+  AC9 must not be recorded as met on the strength of it.
 
 ## Known Annoyances
 
