@@ -10,9 +10,14 @@ For durable rules see METHOD.md.
 Approved spec for GameBrake v1. The reducer and its tests exist and are green;
 nothing that touches Windows exists yet.
 
-Built so far: GameBrake.Core (the reducer, pure) and GameBrake.Core.Tests
-(13 tests, all passing). Every acceptance criterion below that is about policy
-rather than about Windows is already covered there.
+Built so far: GameBrake.Core, holding the reducer and the two file stores, and
+GameBrake.Core.Tests (28 tests, all passing). Every acceptance criterion below
+that is about policy rather than about Windows is covered there.
+
+AC7 is the one to be careful about. Both halves it can reach are done: the
+reducer owes the same remainder when handed a restored state, and a deadline
+survives a real round trip through a real file as the same instant. What is not
+done is AC7 as written, which says rebooting. That needs the host.
 
 ### Problem
 
@@ -144,19 +149,19 @@ Two constraints hold this together:
 
 ## Next Steps
 
-Done: the solution scaffold, the reducer, and its tests. AGENTS.md Environment
-facts are filled in for install, test and build, each having actually been run.
+Done: the solution scaffold, the reducer, the two stores, and their tests.
+AGENTS.md Environment facts carry install, test and build, each having been run.
 
-1. Store: load and save config.json and state.json. This completes AC7 — the
-   reducer half is covered, what is missing is that absolute deadlines survive a
-   real round trip through disk.
-2. Watcher: emit LaunchAttempt on every process start, and ProcessExited.
-   Windows-facing, so a separate net10.0-windows project.
-3. Enforcer: carry out Terminate.
-4. Tray host: wire the four together, show remaining time (AC8), start with the
+1. Watcher: emit LaunchAttempt on every process start, and ProcessExited.
+   Windows-facing, so a separate net10.0-windows project. Whether WMI or ETW can
+   see a launch inside the 2 s AC1 allows is the largest unverified assumption
+   in the project, so probe that before building anything on top of it.
+2. Enforcer: carry out Terminate.
+3. Tray host: wire the four together, show remaining time (AC8), start with the
    session (G5).
-5. Then AC1 to AC9 against real processes, and fill in the dev and e2e
-   Environment facts, which are blank today because there is nothing to run.
+4. Then AC1 to AC9 against real processes, including AC7 as written by actually
+   rebooting, and fill in the dev and e2e Environment facts, which are blank
+   today because there is nothing to run.
 
 ## Open Questions
 
@@ -196,3 +201,16 @@ None blocking. Two deliberately deferred:
   only on Tick. A decision must never depend on a Tick having arrived on time: a
   launch landing between two ticks, or a machine asleep across an entire
   cooldown, would otherwise be judged against a deadline that had already passed.
+- The stores live in GameBrake.Core under Storage/ rather than in a project of
+  their own. What the contract asks for is that reduce be pure, which its
+  signature already guarantees; a second assembly would buy nothing a folder
+  does not. Revisit if anything outside the host ever needs one without the other.
+- A damaged config.json or state.json raises rather than falling back to empty.
+  Reading a damaged state file as "nothing owed" would make corrupting it the
+  cheapest way out of every cooldown at once, and reading a damaged config as
+  "nothing protected" would silently disarm the tool. How the host should
+  present that failure is not decided, because there is no host yet.
+- state.json is written to a temporary file and then moved over the target.
+  It is rewritten on every transition, and a torn write would leave a file that
+  does not parse, which by the decision above stops the tool rather than
+  clearing the cooldown, but either way losing power should not enter into it.
