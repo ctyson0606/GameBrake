@@ -24,6 +24,10 @@ e2e:
 - Before automating a manual action, count how many items and how often.
 - When proposing something larger than what was asked, first state why the
   smaller version is insufficient.
+- Write English into every file: code, identifiers, commit messages, and
+  METHOD.md, STATE.md and GOTCHAS.md. Talking to the user, and the README,
+  follow whatever language they ask for. A memory file that accumulated in
+  two languages is what this prevents, and it only accumulates.
 
 ## Tiers
 T0  free — do it under any time pressure
