@@ -181,9 +181,9 @@ The Environment facts in AGENTS.md are complete: install, dev, test, build and
 e2e have each been run, and typecheck and lint are none for the reasons under
 Known Annoyances.
 
-1. Live with it against real games. Whether 300 seconds is the right number, and
-   whether user-mode friction is enough (N7), are questions about the user rather
-   than about the code, and only use answers them.
+1. Live with it. The tool now works on the game it was built for; what is left
+   is whether 300 seconds is the right number and whether user-mode friction is
+   enough (N7). Both are questions about the user, not the code.
 2. Decide what to do about the git author address and the Co-Authored-By trailer
    before the first push. Nothing has been pushed since the initial commit.
 
@@ -276,6 +276,12 @@ watching what the product's own watcher actually saw rather than by reasoning.
   pressing Play wakes it rather than starting it. Protecting it only killed
   helper instances and charged cooldowns for them while the game went on. See
   GOTCHAS.md.
+
+Verified against the real game on 2026-08-23 after the fix: a launch was closed
+and both binaries were charged, sixteen milliseconds apart, because the chain
+runs VALORANT.exe into VALORANT-Win64-Shipping.exe and both are protected. The
+deadlines coincide, so it is one wait rather than two, and keeping both entries
+means the brake still bites if the chain changes.
 
 Nothing was interrupted mid-session at any point, which is N4 working, though
 from the outside it read as the tool doing nothing.
