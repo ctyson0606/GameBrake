@@ -101,6 +101,22 @@ would turn this tool into a complete record of which applications are launched
 and when. Instrument it while chasing something — the convention above says to
 do exactly that — but take the instrumentation out again.
 
+### One cycle watched is not the behaviour described
+
+Both Valorant binaries were protected, both were charged sixteen milliseconds
+apart, and the coinciding deadlines went into STATE.md as "one wait rather than
+two". That was true of the launch being watched and false of the arrangement:
+used again, the same configuration blocked the user a second time after the
+first cooldown had been waited out. Nothing was measured wrongly. A single
+observation was written down as a description of the steady state, and it read
+as a finding rather than a guess because a real measurement sat beside it.
+
+This tool's whole subject is what happens on the next launch, so the first
+launch is the one cycle that proves least. The rule about bypasses asks what
+something costs the second time; this asks the same of an observation. Watch the
+cycle after the one that convinced you, and until then write down what was seen
+rather than what it implies.
+
 ### Translate the prose, not the lines a reader copies
 
 The README exists in three languages, and the first draft translated the state

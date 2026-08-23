@@ -161,9 +161,17 @@ already resident from login, so there is no launch to intercept — pressing *Pl
 wakes the existing process rather than starting one. Protecting the launcher only
 kills its helper processes while the game itself goes on.
 
-Some games run a chain of binaries. Valorant runs `VALORANT.exe` into
-`VALORANT-Win64-Shipping.exe`; protecting both is fine, because their deadlines
-coincide and it stays a single wait.
+Some games run a chain of binaries, and only one link in the chain is the right
+one to hold. Valorant runs `VALORANT.exe` into `VALORANT-Win64-Shipping.exe`:
+protect `VALORANT-Win64-Shipping.exe`, and only that. Both together was tried and
+charges a second cooldown after the first has already been waited out.
+`VALORANT.exe` on its own does not stop the game from running at all. Neither
+behaviour is understood yet.
+
+So if a protected game starts anyway, or makes you wait twice, try a different
+binary in its chain before concluding the tool is broken. The tray menu shows
+each protected entry and its phase, which is the quickest way to see which one
+is actually being charged.
 
 ---
 

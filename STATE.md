@@ -25,10 +25,15 @@ a script:
   alone was not enough: it freezes while on screen, which is shell behaviour and
   not a defect here, so no amount of updating the text would have served.
 
-It brakes the game it was built for. Valorant was launched and closed, and both
-binaries were charged sixteen milliseconds apart, because the chain runs
-VALORANT.exe into VALORANT-Win64-Shipping.exe and both are protected. The
-deadlines coincide, so it is one wait rather than two.
+It brakes the game it was built for, with one binary protected rather than two.
+VALORANT-Win64-Shipping.exe is the entry that works, and config.json holds it
+alone. The first run had VALORANT.exe protected as well, which charged the two
+sixteen milliseconds apart on coinciding deadlines and was written down here as
+one wait rather than two. Using it again showed that was a description of one
+launch and not of the arrangement: with both protected the user was blocked a
+second time, after the first cooldown had already been waited out. With only
+VALORANT.exe protected the game is not stopped at all. Neither mechanism is
+established — see Open Questions.
 
 Installed at %LOCALAPPDATA%\Programs\GameBrake and started from the Run key, so
 it is independent of the build output. The installed copy is
@@ -217,9 +222,27 @@ out as the install procedure rather than leaving it recorded only here.
 
 ## Open Questions
 
-None blocking.
+Two are open on the Valorant chain, both raised by use and neither diagnosed.
+They are open questions rather than annoyances because the answer would change
+what the tool is understood to do, not merely how pleasant it is to live with.
 
-Two remain deliberately deferred:
+- Why protecting both binaries charges twice. Two config entries are two ids and
+  therefore two independent states by design, so the two are not obliged to move
+  together; what is not known is which one was cooling at the moment of the
+  second block, and why the arrangement survived the first cycle and not the
+  second. state.json is the place to look, read while it is happening rather than
+  after.
+- Why protecting VALORANT.exe alone does not stop the game. It is the first link
+  in the chain, and terminating it evidently does not prevent
+  VALORANT-Win64-Shipping.exe from starting or continuing. The Riot Client is
+  already known to start things that are not its children, so it may be the same
+  shape as the launcher finding below, but that is a guess and is recorded as
+  one.
+
+Neither should be answered by argument. METHOD.md says to make the thing say
+what it saw, and this is exactly the case it was written for.
+
+Two more remain deliberately deferred:
 
 - URL / website cooling-off (N1). Deferred, not rejected. Whether it can reuse
   the same reducer is unexamined.
@@ -346,6 +369,14 @@ suite.
   obstacle: PROCESS_TERMINATE is granted for both game binaries. Checking that
   first is what kept A4 intact, since the alternative on the table was to loosen
   matching to a file name.
+- Protecting both binaries of the Valorant chain is wrong, and it looked right
+  for exactly one launch. Charged sixteen milliseconds apart with coinciding
+  deadlines, it was recorded as a single wait; used again, with both still
+  protected, it blocked the user a second time after the first cooldown had been
+  waited out. Protecting VALORANT.exe alone does not stop the game from running.
+  Only VALORANT-Win64-Shipping.exe is protected now, and that works. What is
+  uncomfortable is not the wrong entry but how it was arrived at: one cycle was
+  watched, and what it implied was written down as though it had been seen.
 - The Riot launcher cannot usefully be protected. It puts itself in the Run key
   in background mode, so it is resident from login and exempt under A5, and
   pressing Play wakes it rather than starting it. Protecting it only killed
@@ -378,7 +409,9 @@ suite.
   would go unnoticed until someone looked at the tray.
 - state.json keeps an entry for an application after it is removed from
   config.json. Nothing reads it, since Status walks the configuration, but the
-  file grows and reading it by hand is confusing. Two orphans are in there now.
+  file grows and reading it by hand is confusing. Four orphans are in there now,
+  against one live entry, and the count only goes up as protected applications
+  are tried and dropped.
 - scripts/e2e.ps1 writes to the real %APPDATA%\GameBrake, because that is where
   the tool it tests looks. Running it replaces config.json and state.json.
   Anything real in there should be copied aside first.
