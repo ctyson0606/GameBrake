@@ -7,7 +7,12 @@ For durable rules see METHOD.md.
 
 ## Current Focus
 
-Approved spec for GameBrake v1. Implementation has not started.
+Approved spec for GameBrake v1. The reducer and its tests exist and are green;
+nothing that touches Windows exists yet.
+
+Built so far: GameBrake.Core (the reducer, pure) and GameBrake.Core.Tests
+(13 tests, all passing). Every acceptance criterion below that is about policy
+rather than about Windows is already covered there.
 
 ### Problem
 
@@ -139,16 +144,19 @@ Two constraints hold this together:
 
 ## Next Steps
 
-1. Scaffold the .NET solution: pure reducer library, xUnit tests against it,
-   tray host.
-2. Fill the Environment facts in AGENTS.md, once each command has actually been
-   run and its output seen. They are blank today because the stack is decided
-   but no project file exists yet, so anything written there now would be an
-   unverified claim.
-3. Build the reducer and its tests first, to AC10. Every state transition and
-   both of the "does not happen" criteria (AC4, AC7) are reachable there
-   without Windows, without a real process, and without waiting.
-4. Only then the Watcher / Enforcer / Store shells around it.
+Done: the solution scaffold, the reducer, and its tests. AGENTS.md Environment
+facts are filled in for install, test and build, each having actually been run.
+
+1. Store: load and save config.json and state.json. This completes AC7 — the
+   reducer half is covered, what is missing is that absolute deadlines survive a
+   real round trip through disk.
+2. Watcher: emit LaunchAttempt on every process start, and ProcessExited.
+   Windows-facing, so a separate net10.0-windows project.
+3. Enforcer: carry out Terminate.
+4. Tray host: wire the four together, show remaining time (AC8), start with the
+   session (G5).
+5. Then AC1 to AC9 against real processes, and fill in the dev and e2e
+   Environment facts, which are blank today because there is nothing to run.
 
 ## Open Questions
 
@@ -161,7 +169,11 @@ None blocking. Two deliberately deferred:
 
 ## Known Annoyances
 
-(empty)
+- No linter or analyzer is configured, so lint is "none" in AGENTS.md. Any
+  verification that reports lint as passing would be reporting a command that
+  never ran. Whether to add one has not been decided.
+- typecheck is also "none", but for a different and harmless reason: C# has no
+  type-check step separate from build. Reading it as a gap would be a mistake.
 
 ## Recent Decisions
 
@@ -176,3 +188,11 @@ None blocking. Two deliberately deferred:
 - C# / .NET for the stack. Process watching, autostart, and tray UI are all
   first-class on Windows, and it is the same toolchain if N7 is ever revisited.
   Local SDK confirmed at 10.0.400.
+- GameBrake.Core targets net10.0, not net10.0-windows. AC10 asks for a reducer
+  that can be tested with no Windows API involved; targeting the neutral
+  framework makes reaching for one a compile error rather than a thing to
+  remember. The Windows-facing projects will target net10.0-windows on their own.
+- Expiries are applied inside reduce, before the event is examined, rather than
+  only on Tick. A decision must never depend on a Tick having arrived on time: a
+  launch landing between two ticks, or a machine asleep across an entire
+  cooldown, would otherwise be judged against a deadline that had already passed.

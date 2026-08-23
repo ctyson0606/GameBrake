@@ -5,13 +5,13 @@ MODE: project        # project | sprint
 TEAM: 1
 
 ## Environment facts
-install:
-dev:
-test:
-typecheck:
-lint:
-build:
-e2e:
+install: dotnet restore
+dev:                 # no runnable host yet; the tray app does not exist
+test: dotnet test
+typecheck: none      # C# type-checks during build, there is no separate command
+lint: none           # no analyzer configured yet, see STATE.md Known Annoyances
+build: dotnet build
+e2e:                 # AC1-AC9 need the Windows host, which is not built yet
 # Leave blank if not yet established. Write "none" if this project
 # genuinely has no such command — "none" is itself a finding and must
 # be reported in any verification, not silently skipped.

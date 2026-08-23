@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GameBrake.Core/GameBrake.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GameBrake.Core.Tests/GameBrake.Core.Tests.csproj" />
+  </Folder>
+</Solution>
