@@ -22,9 +22,15 @@ icon. The tooltip alone was not enough: it froze while on screen, which is a
 shell behaviour and not a defect in the tool, and no amount of updating the text
 could have fixed it.
 
-AC7 is the last one open. What is proven is that a deadline survives the tool
-being killed and restarted, which is the same file and the same code path. A
-real Windows restart has not been done, and only the user can do it.
+AC7 is met, measured on 2026-08-23 across a real Windows restart. A cooldown was
+charged at 17:36:48 with a deadline of 17:41:48, the machine rebooted at 17:37:28
+forty seconds into it, the tray came back on its own 81 seconds after boot, and
+at 17:41:05 it still read cooling with 43 seconds left. state.json had not been
+rewritten since 17:36:48, so the file written before the restart is the one that
+stayed in force: the deadline was honoured, not reset, and the remaining time
+counted down through the reboot.
+
+All ten acceptance criteria are now closed.
 
 AC9 is met for the tray, measured at 31 ms over 60 s, 0.05 percent of one core.
 The WMI polling that feeds it lives in another process, and attributing that
@@ -175,12 +181,10 @@ The Environment facts in AGENTS.md are complete: install, dev, test, build and
 e2e have each been run, and typecheck and lint are none for the reasons under
 Known Annoyances.
 
-1. Reboot the machine mid-cooldown and confirm the remaining time is still owed.
-   This closes AC7 as written, is the last criterion open, and needs a person.
-2. Live with it against real games. Whether 300 seconds is the right number, and
+1. Live with it against real games. Whether 300 seconds is the right number, and
    whether user-mode friction is enough (N7), are questions about the user rather
    than about the code, and only use answers them.
-3. Decide what to do about the git author address and the Co-Authored-By trailer
+2. Decide what to do about the git author address and the Co-Authored-By trailer
    before the first push. Nothing has been pushed since the initial commit.
 
 Published to the per-user programs folder rather than run from the build output,
@@ -268,6 +272,13 @@ First real session on 2026-08-23 found two things a passing suite had not.
 - dotnet test now launches and closes real charmap.exe windows, and takes about
   8 seconds longer for it. That is the price of AC1 being tested rather than
   assumed, but it does mean the suite is no longer silent or instant.
+- Nothing enforces anything for the first minute or so after a reboot. The tray
+  autostarted 81 seconds after boot in the run that closed AC7, and until it is
+  up a protected application launches untouched. A cooldown already owed still
+  survives, so this is not a way out of one, but it is a way to start a fresh
+  session free by rebooting first. Closing it means running before the user
+  session, which is the service this project decided against (N7). Recorded
+  rather than fixed.
 - Nothing tests TrayIconArt. It was verified by rendering every state to a file
   and looking at it, which is how the two digit problem was found, but there is
   no test holding the one-digit rule in place. A change that reintroduces two
