@@ -6,7 +6,14 @@
 # from the deadline in the file rather than from a guess.
 
 $ErrorActionPreference = 'Stop'
-$tray = 'D:\Program Project\Claude\GameBrake\src\GameBrake.Tray\bin\Debug\net10.0-windows\GameBrake.Tray.exe'
+# Derived from where this script sits, not written down. A path typed in here
+# is one machine's path, and it is also that machine's directory layout
+# published to anyone who reads the repository.
+$repository = Split-Path -Parent $PSScriptRoot
+$tray = Join-Path $repository 'src/GameBrake.Tray/bin/Debug/net10.0-windows/GameBrake.Tray.exe'
+if (-not (Test-Path $tray)) {
+    throw "Build it first with: dotnet build. Expected $tray"
+}
 $dir = Join-Path $env:APPDATA 'GameBrake'
 $configPath = Join-Path $dir 'config.json'
 $statePath = Join-Path $dir 'state.json'

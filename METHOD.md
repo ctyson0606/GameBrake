@@ -30,7 +30,20 @@ task touched. The stale entry is never in those sections.
 
 ## Conventions
 
-(empty)
+### Write Windows paths with forward slashes in scripts
+
+PowerShell and .NET accept them, and a path written with \ has to survive
+every layer between where it is typed and where it lands. One such layer eats a
+level of escaping, which turned \bin into a backspace character inside a
+committed script. Forward slashes remove the whole class of problem rather than
+requiring each crossing to be got right. See GOTCHAS.md for the specific trap.
+
+### A scan that reports nothing has to be shown it can report something
+
+Two greps in a row called the repository clean of hardcoded paths while one sat
+in scripts/e2e.ps1, because the pattern was wrong rather than the tree. A clean
+result from a filter nobody has seen match is not evidence of absence. Check the
+pattern against a case that must hit before believing a run that does not.
 
 ## Anti-Patterns
 

@@ -36,3 +36,13 @@ SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA
 Measured on charmap.exe, 6 launches each: WITHIN 1 gave median 347 ms and max
 920 ms, WITHIN 0.5 gave median 537 ms and max 705 ms. Shortening the interval
 buys no margin and costs more polling, so there is no reason to reach for it.
+
+### A Windows path through an inline python heredoc loses one level of escaping  `[2026-08-23]`
+
+Writing \\bin into a file this way produced a backspace character, and
+\\net10.0 produced a real newline: one level of \ is stripped before python
+sees it, so what survives is a valid python escape. Earlier edits looked fine
+only because \G and \s are invalid escapes, which python leaves alone. The
+SyntaxWarning about an invalid escape sequence is the signal that this is
+happening, and it appears even when the output happens to come out right.
+It corrupted scripts/e2e.ps1 after a scan had already called the file clean.
