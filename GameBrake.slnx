@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/GameBrake.Core/GameBrake.Core.csproj" />
+    <Project Path="src/GameBrake.Windows/GameBrake.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GameBrake.Core.Tests/GameBrake.Core.Tests.csproj" />
+    <Project Path="tests/GameBrake.Windows.Tests/GameBrake.Windows.Tests.csproj" />
   </Folder>
 </Solution>

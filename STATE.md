@@ -11,8 +11,9 @@ Approved spec for GameBrake v1. The reducer and its tests exist and are green;
 nothing that touches Windows exists yet.
 
 Built so far: GameBrake.Core, holding the reducer and the two file stores, and
-GameBrake.Core.Tests (28 tests, all passing). Every acceptance criterion below
-that is about policy rather than about Windows is covered there.
+GameBrake.Windows, holding the process watcher and the enforcer. 32 tests pass,
+28 of them with no Windows and no real process, 4 against real ones. What is
+missing is the host that wires the four together.
 
 AC7 is the one to be careful about. Both halves it can reach are done: the
 reducer owes the same remainder when handed a restored state, and a deadline
@@ -51,6 +52,13 @@ defeated by triggering every cooldown in the morning and playing freely after.
 - N4  Interrupting a session already under way.
 - N5  Any platform other than Windows.
 - N6  Multi-user, remote, or accountability-partner features.
+- N8  Packaged applications, meaning anything from the Microsoft Store or Game
+      Pass. They live under WindowsApps at a path carrying a version number that
+      moves on update, and full-path matching does not survive that. Out of
+      scope because games here arrive through Steam, Epic and standalone
+      installers, which are ordinary executables. Should that change, the
+      decided answer is to treat the version segment of the package folder as a
+      wildcard; it is not built until something needs it.
 - N7  Tamper resistance. The tool runs in user mode and can be closed from Task
       Manager. It sells friction, not force: bypassing it takes a deliberate
       act, and that act is itself a moment of pause. This is chosen, not
@@ -58,8 +66,11 @@ defeated by triggering every cooldown in the morning and playing freely after.
 
 ### Acceptance criteria
 
-- AC1   With notepad.exe protected, launching it closes it within 2 s of the
-        window appearing.
+- AC1   With C:\Windows\System32\charmap.exe protected, launching it closes it
+        within 2 s of the window appearing. The subject is a plain Win32
+        executable on purpose: notepad.exe, which this criterion named until it
+        was measured, is an app execution alias on Windows 11 and would let AC1
+        pass while the window it was meant to close stayed open. See GOTCHAS.md.
 - AC2   A further launch attempt during the cooldown is closed the same way and
         does not extend the remaining time.
 - AC3   After the cooldown elapses, a launch inside the grace window succeeds
@@ -149,32 +160,20 @@ Two constraints hold this together:
 
 ## Next Steps
 
-Done: the solution scaffold, the reducer, the two stores, and their tests.
+Done: the scaffold, the reducer, both stores, the watcher and the enforcer.
 AGENTS.md Environment facts carry install, test and build, each having been run.
 
-1. Watcher: emit LaunchAttempt on every process start, and ProcessExited.
-   Windows-facing, so a separate net10.0-windows project. The mechanism is now
-   settled by measurement, but building it is blocked on the two Open Questions,
-   because both change what matching has to do.
-2. Enforcer: carry out Terminate.
-3. Tray host: wire the four together, show remaining time (AC8), start with the
-   session (G5).
-4. Then AC1 to AC9 against real processes, including AC7 as written by actually
-   rebooting, and fill in the dev and e2e Environment facts, which are blank
-   today because there is nothing to run.
+1. Tray host: wire watcher, reducer, store and enforcer together, show remaining
+   time (AC8), start with the Windows session (G5). This is the only piece left
+   before any of AC1 to AC9 can be judged as written.
+2. Then AC1 to AC9 against real use, including AC7 by actually rebooting and AC9
+   by a measurement that survives the noise floor, and fill in the dev and e2e
+   Environment facts.
 
 ## Open Questions
 
-Two are blocking, both raised by the watcher probe, neither answerable without a
-decision from the user. See Recent Findings for the measurements behind them.
-
-- AC1 names notepad.exe, which on Windows 11 is an app execution alias rather
-  than a program. The criterion needs a plain executable as its subject, or it
-  passes while the window it was meant to close stays open.
-- Packaged applications, which is everything installed through Game Pass, live
-  under WindowsApps at a path carrying a version number that moves on update.
-  Full-path matching (A4) does not survive that. Whether v1 covers them at all
-  is a scope decision, not an implementation one.
+None blocking. The two the watcher probe raised are answered: AC1 now names a
+plain executable, and packaged applications are N8.
 
 Two remain deliberately deferred:
 
@@ -210,6 +209,14 @@ about a loaded one.
   never ran. Whether to add one has not been decided.
 - typecheck is also "none", but for a different and harmless reason: C# has no
   type-check step separate from build. Reading it as a gap would be a mistake.
+- dotnet test now launches and closes real charmap.exe windows, and takes about
+  8 seconds longer for it. That is the price of AC1 being tested rather than
+  assumed, but it does mean the suite is no longer silent or instant.
+- One assertion in GameBrake.Windows.Tests is a wall-clock deadline: a launch
+  must be seen inside 2 s, which is AC1 itself. It held on four consecutive runs
+  on an idle machine, against a measured median of 347 ms. A heavily loaded
+  machine is untested and could make it fail. If it ever does, the finding is
+  about AC1, not about the test.
 
 ## Recent Decisions
 
@@ -221,6 +228,12 @@ about a loaded one.
   user-mode app already delivers a pause. A service brings service/UI
   separation, IPC, an installer, and an unlock back door — none of which the
   problem statement asks for yet.
+- AC1 changed subject from notepad.exe to charmap.exe after measurement, and
+  packaged applications became N8. Both came from the same finding, and the
+  first is the more uncomfortable one: an acceptance criterion written to catch
+  a tool that reports success while doing nothing could itself have been passed
+  by a tool doing nothing. It was approved, reviewed, and wrong, and only
+  running it revealed that.
 - C# / .NET for the stack. Process watching, autostart, and tray UI are all
   first-class on Windows, and it is the same toolchain if N7 is ever revisited.
   Local SDK confirmed at 10.0.400.
@@ -241,6 +254,13 @@ about a loaded one.
   cheapest way out of every cooldown at once, and reading a damaged config as
   "nothing protected" would silently disarm the tool. How the host should
   present that failure is not decided, because there is no host yet.
+- Process exits are noticed by holding the permitted process and taking its
+  Exited event, not by a second WMI subscription. A deletion subscription would
+  double the polling that AC9 is about, to answer a question that is already
+  exactly answerable: the only exit that matters is that of a process this tool
+  permitted, and its identity is known at the moment it is permitted.
+- Terminate ends one process, never its tree. A game started from a launcher is
+  a child of that launcher, and taking the tree would close the launcher with it.
 - state.json is written to a temporary file and then moved over the target.
   It is rewritten on every transition, and a torn write would leave a file that
   does not parse, which by the decision above stops the tool rather than
