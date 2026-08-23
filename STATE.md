@@ -10,15 +10,24 @@ For durable rules see METHOD.md.
 Approved spec for GameBrake v1. The reducer and its tests exist and are green;
 nothing that touches Windows exists yet.
 
-Built so far: GameBrake.Core, holding the reducer and the two file stores, and
-GameBrake.Windows, holding the process watcher and the enforcer. 32 tests pass,
-28 of them with no Windows and no real process, 4 against real ones. What is
-missing is the host that wires the four together.
+v1 runs. GameBrake.Core holds the reducer and the two stores, GameBrake.Windows
+the watcher, the enforcer and the engine that wires them, GameBrake.Tray the
+icon and the menu. 45 tests pass, 41 of them with no Windows and no real
+process. The end-to-end script passes 15 of 15 against the running tray.
 
-AC7 is the one to be careful about. Both halves it can reach are done: the
-reducer owes the same remainder when handed a restored state, and a deadline
-survives a real round trip through a real file as the same instant. What is not
-done is AC7 as written, which says rebooting. That needs the host.
+Two criteria are not closed, and neither is closable by a script:
+
+- AC7 says rebooting. What is proven is that a deadline survives the tool being
+  killed and restarted, which is the same file and the same code path. A real
+  Windows restart has not been done, and only the user can do it.
+- AC8 says visible without hunting. The tooltip, the menu and the balloon on a
+  refused launch all exist and are exercised by tests, but whether the number is
+  actually where a person looks is a judgement nobody has made yet.
+
+AC9 is met for the tray, measured at 31 ms over 60 s, 0.05 percent of one core.
+The WMI polling that feeds it lives in another process, and attributing that
+cost has so far only produced noise. What can be said is that it is small enough
+to hide under the run-to-run variation of background WMI activity.
 
 ### Problem
 
@@ -160,15 +169,22 @@ Two constraints hold this together:
 
 ## Next Steps
 
-Done: the scaffold, the reducer, both stores, the watcher and the enforcer.
-AGENTS.md Environment facts carry install, test and build, each having been run.
+The Environment facts in AGENTS.md are complete: install, dev, test, build and
+e2e have each been run, and typecheck and lint are none for the reasons under
+Known Annoyances.
 
-1. Tray host: wire watcher, reducer, store and enforcer together, show remaining
-   time (AC8), start with the Windows session (G5). This is the only piece left
-   before any of AC1 to AC9 can be judged as written.
-2. Then AC1 to AC9 against real use, including AC7 by actually rebooting and AC9
-   by a measurement that survives the noise floor, and fill in the dev and e2e
-   Environment facts.
+1. Reboot the machine mid-cooldown and confirm the remaining time is still owed.
+   This closes AC7 as written and needs a person, not a script.
+2. Look at the tray while a cooldown runs and decide whether AC8 is actually met.
+   The number exists in three places; whether that is the right three is a
+   judgement.
+3. Live with it for a while against real games. Whether 300 seconds is the right
+   number, and whether user-mode friction is enough (N7), are questions about the
+   user rather than about the code, and only use answers them.
+
+Not started, and deliberately: packaging or an installer. Running it from the
+build output plus the autostart toggle is enough to find out whether the thing
+works before deciding it deserves an installer.
 
 ## Open Questions
 
@@ -203,6 +219,13 @@ about a loaded one.
   AC9 must not be recorded as met on the strength of it.
 
 ## Known Annoyances
+
+- scripts/e2e.ps1 writes to the real %APPDATA%\GameBrake, because that is where
+  the tool it is testing looks. Running it replaces config.json and state.json.
+  Anything real in there should be copied aside first.
+- AGENTS.md now names scripts/e2e.ps1, but the path-reference check in
+  scripts/check.sh only looks at .md, .sh, .json, .yaml and .txt. Renaming the
+  e2e script would not be caught. Worth sending upstream rather than fixing here.
 
 - No linter or analyzer is configured, so lint is "none" in AGENTS.md. Any
   verification that reports lint as passing would be reporting a command that
@@ -259,6 +282,18 @@ about a loaded one.
   double the polling that AC9 is about, to answer a question that is already
   exactly answerable: the only exit that matters is that of a process this tool
   permitted, and its identity is known at the moment it is permitted.
+- The tray keeps no policy of its own. Everything it shows comes from
+  BrakeEngine.Status, and every decision comes back from Reducer.Reduce. The
+  engine sits behind IProcessWatcher and IProcessTerminator so the wiring can be
+  tested with a fake watcher and a clock under the test, which is where
+  forgetting to save state or forgetting to follow a permitted process would
+  otherwise hide until a real game found it.
+- State is written to disk before the terminate is carried out, not after. If
+  the process dies between the two, the cooldown is still owed. The other order
+  loses it, and losing it is the failure that matters.
+- Quitting from the tray asks once when a cooldown is running. Closing the tool
+  stays possible by decision (N7), but the usual reason for being in that menu
+  is irritation at a countdown, and one question is the cheapest possible pause.
 - Terminate ends one process, never its tree. A game started from a launcher is
   a child of that launcher, and taking the tree would close the launcher with it.
 - state.json is written to a temporary file and then moved over the target.

@@ -20,7 +20,7 @@ namespace GameBrake.Windows;
 /// permitted, and its identity is known the moment it is permitted.
 /// </para>
 /// </remarks>
-public sealed class WindowsProcessWatcher : IDisposable
+public sealed class WindowsProcessWatcher : IProcessWatcher
 {
     private const string StartQuery =
         "SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'";

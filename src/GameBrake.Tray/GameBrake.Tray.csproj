@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\GameBrake.Core\GameBrake.Core.csproj" />
+    <ProjectReference Include="..\GameBrake.Windows\GameBrake.Windows.csproj" />
+  </ItemGroup>
+</Project>

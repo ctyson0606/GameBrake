@@ -5,7 +5,7 @@ namespace GameBrake.Windows;
 /// <summary>
 /// Carries out the one action the reducer can ask for that touches the machine.
 /// </summary>
-public sealed class ProcessEnforcer
+public sealed class ProcessEnforcer : IProcessTerminator
 {
     /// <summary>
     /// End one process and wait for it to be gone.

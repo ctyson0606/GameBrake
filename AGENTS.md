@@ -6,12 +6,12 @@ TEAM: 1
 
 ## Environment facts
 install: dotnet restore
-dev:                 # no runnable host yet; the tray app does not exist
+dev: dotnet run --project src/GameBrake.Tray
 test: dotnet test
 typecheck: none      # C# type-checks during build, there is no separate command
 lint: none           # no analyzer configured yet, see STATE.md Known Annoyances
 build: dotnet build
-e2e:                 # AC1-AC9 need the Windows host, which is not built yet
+e2e: powershell -ExecutionPolicy Bypass -File scripts/e2e.ps1
 # Leave blank if not yet established. Write "none" if this project
 # genuinely has no such command — "none" is itself a finding and must
 # be reported in any verification, not silently skipped.
