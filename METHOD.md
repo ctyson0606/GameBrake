@@ -38,12 +38,43 @@ level of escaping, which turned \bin into a backspace character inside a
 committed script. Forward slashes remove the whole class of problem rather than
 requiring each crossing to be got right. See GOTCHAS.md for the specific trap.
 
-### A scan that reports nothing has to be shown it can report something
+### A check that cannot fail for the defect in question is not evidence
 
 Two greps in a row called the repository clean of hardcoded paths while one sat
-in scripts/e2e.ps1, because the pattern was wrong rather than the tree. A clean
-result from a filter nobody has seen match is not evidence of absence. Check the
-pattern against a case that must hit before believing a run that does not.
+in scripts/e2e.ps1, because the pattern was wrong rather than the tree. Later a
+test asserted a serialised file by listing keys that had to be present, which
+can only notice a key that went missing and never one that turned up uninvited,
+so a property that serialised out and could not be read back sat in a
+hand-edited config for a day looking exactly like the setting it was not. Both
+passed. Neither could have failed.
+
+Before believing a green result, ask what defect it would have caught, and show
+it catching one. A pattern gets tried against a case that must hit; an assertion
+gets written so the shape is exact rather than merely included.
+
+### Check the obstacle is real before designing around it
+
+Valorant went unbraked, and the obvious reading was that a kernel anti-cheat had
+put it out of reach. The change on the table was to loosen full-path matching to
+a file name, a permanent widening of what the tool can hit wrong. Measuring first
+showed PROCESS_TERMINATE was granted for both game binaries, so the only real
+obstacle was that WMI would not report a path, and a lower-privilege call
+returned it intact. The assumption survived untouched.
+
+A workaround bought before the obstacle is measured is paid for forever. Measure
+the thing said to be impossible; it is often a different, smaller thing.
+
+### When something appears to do nothing, watch it rather than reason about it
+
+Three separate reports of the tool doing nothing had three unrelated causes: an
+application added while it was already running, a launcher resident since login
+and exempt by design, and a game whose path WMI refused to give. Every one was
+found by instrumenting what the product actually observed and reading it back.
+None would have been reached by reasoning, and the second and third both had a
+plausible wrong explanation ready to hand.
+
+Make the thing say what it saw. A log of observations settles in one run what
+argument does not settle at all.
 
 ## Anti-Patterns
 
