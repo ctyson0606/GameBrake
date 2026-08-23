@@ -17,12 +17,14 @@ process. The end-to-end script passes 15 of 15 against the running tray.
 
 Two criteria are not closed, and neither is closable by a script:
 
-- AC7 says rebooting. What is proven is that a deadline survives the tool being
-  killed and restarted, which is the same file and the same code path. A real
-  Windows restart has not been done, and only the user can do it.
-- AC8 says visible without hunting. The tooltip, the menu and the balloon on a
-  refused launch all exist and are exercised by tests, but whether the number is
-  actually where a person looks is a judgement nobody has made yet.
+AC8 is met, judged by the user on 2026-08-23 after the countdown moved into the
+icon. The tooltip alone was not enough: it froze while on screen, which is a
+shell behaviour and not a defect in the tool, and no amount of updating the text
+could have fixed it.
+
+AC7 is the last one open. What is proven is that a deadline survives the tool
+being killed and restarted, which is the same file and the same code path. A
+real Windows restart has not been done, and only the user can do it.
 
 AC9 is met for the tray, measured at 31 ms over 60 s, 0.05 percent of one core.
 The WMI polling that feeds it lives in another process, and attributing that
@@ -174,17 +176,17 @@ e2e have each been run, and typecheck and lint are none for the reasons under
 Known Annoyances.
 
 1. Reboot the machine mid-cooldown and confirm the remaining time is still owed.
-   This closes AC7 as written and needs a person, not a script.
-2. Look at the tray while a cooldown runs and decide whether AC8 is actually met.
-   The number exists in three places; whether that is the right three is a
-   judgement.
-3. Live with it for a while against real games. Whether 300 seconds is the right
-   number, and whether user-mode friction is enough (N7), are questions about the
-   user rather than about the code, and only use answers them.
+   This closes AC7 as written, is the last criterion open, and needs a person.
+2. Live with it against real games. Whether 300 seconds is the right number, and
+   whether user-mode friction is enough (N7), are questions about the user rather
+   than about the code, and only use answers them.
+3. Decide what to do about the git author address and the Co-Authored-By trailer
+   before the first push. Nothing has been pushed since the initial commit.
 
-Not started, and deliberately: packaging or an installer. Running it from the
-build output plus the autostart toggle is enough to find out whether the thing
-works before deciding it deserves an installer.
+Published to the per-user programs folder rather than run from the build output,
+because autostart records an absolute path and dotnet clean would otherwise
+break it silently. That is a copied folder, not an installer, and an installer
+is still deliberately not started.
 
 ## Open Questions
 
