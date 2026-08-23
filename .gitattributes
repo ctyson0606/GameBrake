@@ -1,0 +1,15 @@
+# No global eol=lf here: the contents of a consuming project are unknown, and
+# Windows batch files need CRLF to run.
+* text=auto
+*.sh text eol=lf
+*.md text eol=lf
+*.mdc text eol=lf
+VERSION text eol=lf
+kit/entry-points.txt text eol=lf
+# The tool entry files that carry no extension. They are read by tools, not by
+# a shell, but they are listed for the same reason VERSION is: an extensionless
+# file falls through every pattern above and would be left to text=auto.
+.clinerules text eol=lf
+.windsurfrules text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf

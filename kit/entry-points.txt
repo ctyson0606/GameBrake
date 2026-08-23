@@ -1,0 +1,20 @@
+# Every path below is a door into AGENTS.md, one per AI tool. The body of each
+# is the same; only the location and any frontmatter the tool insists on are
+# different. This file is the list both checkers read, so a tool added in one
+# place is not missed in the other.
+#
+# A project that does not use a tool may delete its entry. Deleting one costs
+# nothing — a tool nobody opens does not care that its file is gone. Forgetting
+# to add one costs more than it looks like: the tool simply never reads
+# AGENTS.md, behaves as though the project had no rules at all, and reports
+# nothing.
+#
+# Tools that read AGENTS.md natively need no entry here and are covered by the
+# canonical file itself.
+
+CLAUDE.md
+GEMINI.md
+.clinerules
+.windsurfrules
+.cursor/rules/sparkforge.mdc
+.github/copilot-instructions.md
