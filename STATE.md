@@ -255,6 +255,31 @@ First real session on 2026-08-23 found two things a passing suite had not.
   never seeing the launch. The fixture now refuses to run while GameBrake.Tray
   is up, and says why.
 
+## Recent Decisions from first real game
+
+Valorant launched untouched, reported 2026-08-23. Three separate causes, found by
+watching what the product's own watcher actually saw rather than by reasoning.
+
+- Win32_Process reports no ExecutablePath for a process Vanguard protects, and
+  the watcher discarded every start it could not name. That made the game
+  invisible: state.json never held an entry for it at all. The watcher now falls
+  back to QueryFullProcessImageName, which needs only
+  PROCESS_QUERY_LIMITED_INFORMATION and returns the real path. A4 is untouched,
+  which matters: the alternative on the table was to match a file name instead,
+  and that would have been a worse tool for a problem that turned out to be an
+  API choice.
+- Termination was never the obstacle. PROCESS_TERMINATE is granted for both
+  Valorant binaries; only Vanguard's own service refuses, and nothing needs it.
+  Establishing that first is what made the fix worth doing.
+- The Riot launcher cannot usefully be protected. It puts itself in the Run key
+  in background mode, so it is resident from login and exempt under A5, and
+  pressing Play wakes it rather than starting it. Protecting it only killed
+  helper instances and charged cooldowns for them while the game went on. See
+  GOTCHAS.md.
+
+Nothing was interrupted mid-session at any point, which is N4 working, though
+from the outside it read as the tool doing nothing.
+
 ## Known Annoyances
 
 - scripts/e2e.ps1 writes to the real %APPDATA%\GameBrake, because that is where
@@ -279,6 +304,9 @@ First real session on 2026-08-23 found two things a passing suite had not.
   session free by rebooting first. Closing it means running before the user
   session, which is the service this project decided against (N7). Recorded
   rather than fixed.
+- state.json keeps an entry for an application after it is removed from
+  config.json. Nothing reads it, since Status walks the configuration, but the
+  file grows and reading it by hand is confusing. Two orphans are in there now.
 - Nothing tests TrayIconArt. It was verified by rendering every state to a file
   and looking at it, which is how the two digit problem was found, but there is
   no test holding the one-digit rule in place. A change that reintroduces two

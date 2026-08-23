@@ -46,3 +46,23 @@ only because \G and \s are invalid escapes, which python leaves alone. The
 SyntaxWarning about an invalid escape sequence is the signal that this is
 happening, and it appears even when the output happens to come out right.
 It corrupted scripts/e2e.ps1 after a scan had already called the file clean.
+
+### Riot Vanguard hides ExecutablePath from WMI, but not from Windows  `[2026-08-23]`
+
+Win32_Process reports ExecutablePath as NULL for VALORANT.exe,
+VALORANT-Win64-Shipping.exe and vgc.exe while Vanguard is running, and
+Process.MainModule throws access denied for them, because reading modules wants
+PROCESS_VM_READ. QueryFullProcessImageName wants only
+PROCESS_QUERY_LIMITED_INFORMATION, which is granted, and it returns the real
+full path for both game processes. PROCESS_TERMINATE is granted for them too,
+so they can be ended once they can be seen. Vanguard's own service vgc.exe
+refuses every access, and nothing here needs it.
+
+### Riot Client puts itself in the Run key in background mode  `[2026-08-23]`
+
+HKCU Run carries RiotClientServices.exe --launch-background-mode, so the
+launcher is resident from login. Measured once: it started 48 s after boot and
+GameBrake 81 s after, so by A5 the launcher was left alone permanently. Even
+without that race, pressing Play wakes the resident client rather than starting
+a new process, so there is no launch to intercept. Protect the game binaries,
+not the launcher.

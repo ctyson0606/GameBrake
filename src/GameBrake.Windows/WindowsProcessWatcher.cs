@@ -114,22 +114,29 @@ public sealed class WindowsProcessWatcher : IProcessWatcher
             return;
         }
 
-        var executablePath = target["ExecutablePath"]?.ToString();
-
-        // No path, nothing to match on. App execution aliases and processes owned
-        // by other accounts both report none, and matching is on the full path by
-        // decision (A4), so there is nothing this tool can say about them.
-        if (string.IsNullOrEmpty(executablePath))
-        {
-            return;
-        }
-
         int processId;
         try
         {
             processId = Convert.ToInt32(target["ProcessId"]);
         }
         catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException)
+        {
+            return;
+        }
+
+        var executablePath = target["ExecutablePath"]?.ToString();
+
+        // WMI says nothing about a process an anti-cheat is protecting, and
+        // discarding those let Valorant through entirely. Ask Windows directly
+        // before giving up; it answers where WMI will not. See ProcessImagePath.
+        if (string.IsNullOrEmpty(executablePath))
+        {
+            executablePath = ProcessImagePath.Of(processId);
+        }
+
+        // Still nothing, so there is nothing to match on and nothing to say.
+        // Matching is on the full path by decision (A4).
+        if (string.IsNullOrEmpty(executablePath))
         {
             return;
         }
