@@ -76,6 +76,49 @@ plausible wrong explanation ready to hand.
 Make the thing say what it saw. A log of observations settles in one run what
 argument does not settle at all.
 
+### A bypass paid once is not the bypass N7 accepts
+
+N7 says the tool can be closed and that closing it is itself the pause being
+sold. That argument holds only for bypasses paid every time. The single-instance
+mutex could be taken by anything in the session, after which every later start
+exited without a word: set up once, silent from then on, and indistinguishable
+from a tool nobody had launched. The same outcome as Task Manager at an entirely
+different price.
+
+When judging whether something falls under N7, ask what it costs the second time
+and whether anything is left to notice. Recurring and visible is the bargain.
+One-off and silent is not, however much it costs the first time.
+
+### The watcher sees every process start and must keep none of it
+
+The WMI subscription is machine-wide. Every process start arrives with its full
+path, protected or not, and a start WMI declines to name is asked about
+directly. None of it is written down: paths are matched once in memory and
+dropped, state.json holds only ids and deadlines, and there is no log.
+
+Worth stating because nothing enforces it. One diagnostic line written to a file
+would turn this tool into a complete record of which applications are launched
+and when. Instrument it while chasing something — the convention above says to
+do exactly that — but take the instrumentation out again.
+
+### Read memory and git state from disk before acting on it
+
+The METHOD.md, STATE.md and git log supplied as opening context are a snapshot,
+and the snapshot can be several commits old. It was here: HEAD was three commits
+further on than it said, and STATE.md on disk was several revisions newer.
+Answering from the snapshot produced a confident and false claim that STATE.md's
+test counts were stale, when the file on disk already carried the right numbers.
+
+Open the file. The cost is one command, and the failure mode is telling someone
+something untrue about their own repository.
+
 ## Anti-Patterns
 
-(empty)
+### Namespacing the single-instance mutex instead of verifying what holds it
+
+Rejected. A `Local\` or `Global\` prefix, or a longer and less guessable name,
+changes which namespace the object lives in and nothing else. A named object
+still has no owner, and anything in the session can still take it first. The
+change would have looked like a fix while leaving the bypass exactly where it
+was. The name was never the question; whether a second copy is actually running
+is, and that can be asked directly.

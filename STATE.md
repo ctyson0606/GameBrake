@@ -31,7 +31,23 @@ VALORANT.exe into VALORANT-Win64-Shipping.exe and both are protected. The
 deadlines coincide, so it is one wait rather than two.
 
 Installed at %LOCALAPPDATA%\Programs\GameBrake and started from the Run key, so
-it is independent of the build output.
+it is independent of the build output. The installed copy is
+bin/Release/net10.0-windows copied whole, and the Run key holds an absolute path
+into it. A change reaches daily use only when that copy is repeated.
+
+A security review on 2026-08-23 read every source file and turned up one thing
+worth fixing: the single-instance mutex could be taken by anything in the
+session, after which the tray exited without a word at every start. It now
+checks whether a second GameBrake process actually exists before standing down.
+Built, tested, installed, and confirmed against the installed executable rather
+than the build output.
+
+The review found nothing else to act on. There is no network code and no
+third-party dependency beyond System.Management; the manifest is asInvoker; the
+only registry key touched is HKCU Run, whose value is correctly quoted;
+deserialisation is System.Text.Json onto records with no polymorphism; and the
+single Process.Start call takes a fixed path. What the tool can see is wide and
+what it retains is nothing — see METHOD.md, which now holds that as a rule.
 
 ### Problem
 
@@ -269,6 +285,14 @@ Design-time, in the order they still matter.
 - Quitting from the tray asks once when a cooldown is running. Closing the tool
   stays possible by decision (N7), but the usual reason for being in that menu
   is irritation at a countdown, and one question is the cheapest possible pause.
+- The single-instance check verifies rather than infers. A taken mutex name is
+  evidence that somebody holds the name, not that another copy is running, and
+  the two part company the moment anything else takes it first. So the tray asks
+  the question the name was standing in for: is there a second GameBrake process?
+  If not, there is nothing to collide over, and whoever holds the name may keep
+  it. The process name is read from the running process rather than written down,
+  so renaming the executable cannot quietly turn the check into one that never
+  matches.
 
 ## What using it changed
 
@@ -350,3 +374,16 @@ suite.
   ran. Whether to add one has not been decided.
 - typecheck is also "none", but for a different and harmless reason: C# has no
   type-check step separate from build. Reading it as a gap would be a mistake.
+- Nothing tests the single-instance check. It was verified by a throwaway script
+  that took the name, launched the tray and watched it survive, with a control
+  run first showing the name free so the probe was known to be able to report
+  both answers. The script was not kept. Same gap as TrayIconArt.
+- Terminate can in principle hit the wrong process. Between the WMI event and the
+  kill — median 347 ms — the observed process could exit and Windows could
+  reissue its pid. Never seen, and the window is small, but it is the only path
+  by which this tool could end something nobody asked it to. Recorded, not fixed.
+- config.json and the installed executable are both writable by anything running
+  as this user, which can therefore add entries, empty the protected set, or
+  replace the tray outright. That is the N7 bargain rather than a separate hole:
+  the same access already permits closing the tool. Worth knowing when reading
+  the file; not worth defending against.
