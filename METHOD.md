@@ -101,6 +101,21 @@ would turn this tool into a complete record of which applications are launched
 and when. Instrument it while chasing something — the convention above says to
 do exactly that — but take the instrumentation out again.
 
+### Translate the prose, not the lines a reader copies
+
+The README exists in three languages, and the first draft translated the state
+diagram and the trailing comments on the build commands along with everything
+else. check.sh refused it: what sits inside a fence, minus the lines that are
+only a comment, has to be identical in every translation, because that is the
+part a reader copies into a terminal rather than reads. A translated command is
+a command that does not work, and it breaks for the reader least able to check
+it against the original.
+
+So a diagram stays in one language across all the files — right here anyway,
+since those four phase names are the values state.json actually holds — with the
+reading of it in prose underneath, and a comment that wants translating moves
+onto a line of its own, which the check already exempts.
+
 ### Read memory and git state from disk before acting on it
 
 The METHOD.md, STATE.md and git log supplied as opening context are a snapshot,

@@ -49,6 +49,14 @@ deserialisation is System.Text.Json onto records with no polymorphism; and the
 single Process.Start call takes a fixed path. What the tool can see is wide and
 what it retains is nothing — see METHOD.md, which now holds that as a rule.
 
+The repository now explains itself to somebody who has not read the source.
+README.md, README.zh-TW.md and README.zh-CN.md cover what the tool is, the four
+phases and the two properties worth knowing about them, building it, copying the
+build output somewhere of its own and pointing the Run key at that copy, every
+key in config.json, and why the game binary is the thing to protect rather than
+the launcher. Everything in them was read out of the source rather than out of
+this file. Licensed MIT.
+
 ### Problem
 
 The impulse to play and the act of playing are separated by nothing — a
@@ -204,7 +212,8 @@ and lint are none for the reasons under Known Annoyances.
    the SYSTEM service under N7.
 
 Packaging is deliberately not started. A copied folder plus the autostart toggle
-is enough until something makes it insufficient.
+is enough until something makes it insufficient, and the README now spells that
+out as the install procedure rather than leaving it recorded only here.
 
 ## Open Questions
 
@@ -293,6 +302,13 @@ Design-time, in the order they still matter.
   it. The process name is read from the running process rather than written down,
   so renaming the executable cannot quietly turn the check into one that never
   matches.
+- MIT rather than no licence at all. Nothing here was being withheld, and a
+  repository with no licence is one nobody may legally reuse — which is a
+  stricter position than was ever intended, arrived at by omission.
+- Three READMEs rather than one English file with a note. The tool is used in
+  Chinese and read in English, and a translation that exists is read while a
+  translation that is promised is not. The cost is that the three have to be
+  edited together, which check.sh enforces.
 
 ## What using it changed
 
@@ -382,6 +398,12 @@ suite.
   kill — median 347 ms — the observed process could exit and Windows could
   reissue its pid. Never seen, and the window is small, but it is the only path
   by which this tool could end something nobody asked it to. Recorded, not fixed.
+- The READMEs quote three numbers that nothing keeps in sync: 50 tests, 29 of
+  them free of Windows, and 15 end-to-end checks. They were counted rather than
+  copied when written — 50 [Fact] with no theories and no inline data, 29 of them
+  in GameBrake.Core.Tests, 15 Check calls in scripts/e2e.ps1 — but adding a
+  single test makes all three files wrong, and check.sh compares the translations
+  against each other, never against the suite. Same class of gap as TrayIconArt.
 - config.json and the installed executable are both writable by anything running
   as this user, which can therefore add entries, empty the protected set, or
   replace the tray outright. That is the N7 bargain rather than a separate hole:

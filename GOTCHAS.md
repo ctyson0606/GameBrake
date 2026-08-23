@@ -66,3 +66,13 @@ GameBrake 81 s after, so by A5 the launcher was left alone permanently. Even
 without that race, pressing Play wakes the resident client rather than starting
 a new process, so there is no launch to intercept. Protect the game binaries,
 not the launcher.
+
+### A long heredoc through the agent shell can fail to parse  `[2026-08-23]`
+
+Writing an eight kilobyte README with `cat > file <<'EOF'` returned
+"unexpected EOF while looking for matching `'`" and wrote nothing. A three-line
+heredoc carrying the same suspect characters — apostrophes, backticks, double
+quotes — went through untouched, so no single character explains it and the
+boundary was not chased any further. Recorded so the next attempt is not a
+second one at the shell: the file-writing tool did it in one call. Do not read
+this as a measured size limit; the cause is not established.
