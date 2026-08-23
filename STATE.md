@@ -229,6 +229,20 @@ First real session on 2026-08-23 found two things a passing suite had not.
   Now [JsonIgnore]. The test that should have caught it used Assert.Contains,
   which can only notice a key that went missing, never one that turned up
   uninvited; it now asserts the exact key set.
+- The tray tooltip does not update while it is on screen. The shell reads a
+  notify icon tooltip once, when it appears, and never again, so a countdown
+  there stands still until the pointer leaves and comes back. Reported from use.
+  Rather than replace it with a custom window that chases the pointer, the
+  countdown is drawn into the icon, which redraws in place and needs no pointer
+  at all. That is closer to what AC8 asks for than the tooltip ever was.
+- The icon shows one digit and never two. Sixteen pixels is what the shell asks
+  for, and two digits rendered into that are a smudge: 59 and 28 were drawn and
+  looked at, and both were unreadable while 5 and 9 were clear. So it counts
+  minutes, 5 4 3 2 1, then turns green. Showing nothing at all under a minute
+  was tried first and left a blank disc that read as a broken icon.
+- The ring sweeps the seconds within the current minute, not the whole cooldown.
+  Against five minutes it moves a third of a percent per second and stands
+  visibly still, which was the original complaint restated in another form.
 - The integration tests fought a running copy of the product for the subject
   process. A process that starts and dies inside the one-second WMI polling
   window raises no creation event at all, so the failure read as the watcher
@@ -252,6 +266,10 @@ First real session on 2026-08-23 found two things a passing suite had not.
 - dotnet test now launches and closes real charmap.exe windows, and takes about
   8 seconds longer for it. That is the price of AC1 being tested rather than
   assumed, but it does mean the suite is no longer silent or instant.
+- Nothing tests TrayIconArt. It was verified by rendering every state to a file
+  and looking at it, which is how the two digit problem was found, but there is
+  no test holding the one-digit rule in place. A change that reintroduces two
+  characters would go unnoticed until someone looked at the tray.
 - One assertion in GameBrake.Windows.Tests is a wall-clock deadline: a launch
   must be seen inside 2 s, which is AC1 itself. It held on four consecutive runs
   on an idle machine, against a measured median of 347 ms. A heavily loaded

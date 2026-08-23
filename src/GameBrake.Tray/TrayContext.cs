@@ -17,7 +17,9 @@ internal sealed class TrayContext : ApplicationContext
     private readonly Control _marshal = new();
     private readonly FileSystemWatcher? _configurationChanges;
     private readonly BrakeEngine _engine;
-    private readonly Icon _drawnIcon;
+
+    private Icon? _currentIcon;
+    private string _iconKey = string.Empty;
 
     private Configuration _configuration;
 
@@ -28,7 +30,8 @@ internal sealed class TrayContext : ApplicationContext
         _marshal.CreateControl();
 
         _configuration = LoadConfigurationOrDefault();
-        _drawnIcon = BuildIcon();
+        _currentIcon = TrayIconArt.AtRest();
+        _iconKey = "at rest";
 
         _engine = new BrakeEngine(
             _configuration,
@@ -38,7 +41,7 @@ internal sealed class TrayContext : ApplicationContext
 
         _icon = new NotifyIcon
         {
-            Icon = _drawnIcon,
+            Icon = _currentIcon,
             Visible = true,
             Text = "GameBrake",
             ContextMenuStrip = new ContextMenuStrip(),
@@ -147,21 +150,55 @@ internal sealed class TrayContext : ApplicationContext
     {
         var statuses = _engine.Status();
 
-        // The most urgent countdown goes on the tooltip, so the number is one
-        // hover away and never needs looking for (AC8).
-        var cooling = statuses
-            .Where(status => status.State.Phase == Phase.Cooling && status.Remaining is not null)
+        // Whichever countdown runs out first is the one worth showing.
+        var urgent = statuses
+            .Where(status => status.Remaining is not null
+                             && status.State.Phase is Phase.Cooling or Phase.Unlocked)
             .OrderBy(status => status.Remaining!.Value)
             .FirstOrDefault();
 
-        var text = cooling is not null
-            ? $"GameBrake — {cooling.App.DisplayName} {Countdown(cooling.Remaining!.Value)}"
-            : statuses.Count == 0
-                ? "GameBrake — nothing protected yet"
-                : "GameBrake — nothing cooling";
+        var text = urgent switch
+        {
+            null when statuses.Count == 0 => "GameBrake - nothing protected yet",
+            null => "GameBrake - nothing cooling",
+            { State.Phase: Phase.Unlocked } =>
+                $"GameBrake - {urgent.App.DisplayName} open within {Countdown(urgent.Remaining!.Value)}",
+            _ => $"GameBrake - {urgent.App.DisplayName} {Countdown(urgent.Remaining!.Value)}",
+        };
 
-        // NotifyIcon.Text is capped at 63 characters and throws past it.
+        // NotifyIcon.Text is capped at 63 characters and throws past it. It is
+        // also read once when the tooltip appears and never refreshed while it
+        // is up, which is why the countdown is drawn into the icon as well.
         _icon.Text = text.Length <= 63 ? text : text[..63];
+
+        DrawIcon(urgent);
+    }
+
+    private void DrawIcon(AppStatus? urgent)
+    {
+        var key = urgent is null
+            ? "at rest"
+            : $"{urgent.State.Phase}:{(int)Math.Ceiling(urgent.Remaining!.Value.TotalSeconds)}";
+
+        // Once a second at most, and not at all while nothing is counting.
+        if (key == _iconKey)
+        {
+            return;
+        }
+
+        _iconKey = key;
+
+        var next = urgent is null
+            ? TrayIconArt.AtRest()
+            : TrayIconArt.Countdown(
+                urgent.Remaining!.Value, permitted: urgent.State.Phase is Phase.Unlocked);
+
+        var previous = _currentIcon;
+        _icon.Icon = next;
+        _currentIcon = next;
+
+        // Only after the shell has been handed the replacement.
+        previous?.Dispose();
     }
 
     private void BuildMenu()
@@ -335,32 +372,6 @@ internal sealed class TrayContext : ApplicationContext
         ExitThread();
     }
 
-    // --- the icon itself -----------------------------------------------------
-
-    private static Icon BuildIcon()
-    {
-        using var bitmap = new Bitmap(32, 32);
-        using (var canvas = Graphics.FromImage(bitmap))
-        {
-            canvas.SmoothingMode = SmoothingMode.AntiAlias;
-            canvas.Clear(Color.Transparent);
-
-            using var disc = new SolidBrush(Color.FromArgb(198, 62, 62));
-            canvas.FillEllipse(disc, 1, 1, 30, 30);
-
-            using var bars = new SolidBrush(Color.White);
-            canvas.FillRectangle(bars, 10, 9, 4, 14);
-            canvas.FillRectangle(bars, 18, 9, 4, 14);
-        }
-
-        var handle = bitmap.GetHicon();
-        using var drawn = Icon.FromHandle(handle);
-        // Clone, so the icon outlives the handle we are about to release.
-        var owned = (Icon)drawn.Clone();
-        NativeMethods.DestroyIcon(handle);
-        return owned;
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -370,7 +381,7 @@ internal sealed class TrayContext : ApplicationContext
             _configurationChanges?.Dispose();
             _icon.Visible = false;
             _icon.Dispose();
-            _drawnIcon.Dispose();
+            _currentIcon?.Dispose();
             _engine.Dispose();
             _marshal.Dispose();
         }
