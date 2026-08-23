@@ -218,6 +218,23 @@ about a loaded one.
   background WMI activity in the host processes. That is not the same as zero.
   AC9 must not be recorded as met on the strength of it.
 
+## Recent Decisions from use
+
+First real session on 2026-08-23 found two things a passing suite had not.
+
+- Configuration.Cooldown, a getter with no setter, was being serialised into
+  config.json. It could not be read back, so the file carried a second thing
+  that looked like the cooldown setting, next to the real one, doing nothing.
+  Edited by hand instead of cooldownSeconds, it changed nothing and said nothing.
+  Now [JsonIgnore]. The test that should have caught it used Assert.Contains,
+  which can only notice a key that went missing, never one that turned up
+  uninvited; it now asserts the exact key set.
+- The integration tests fought a running copy of the product for the subject
+  process. A process that starts and dies inside the one-second WMI polling
+  window raises no creation event at all, so the failure read as the watcher
+  never seeing the launch. The fixture now refuses to run while GameBrake.Tray
+  is up, and says why.
+
 ## Known Annoyances
 
 - scripts/e2e.ps1 writes to the real %APPDATA%\GameBrake, because that is where

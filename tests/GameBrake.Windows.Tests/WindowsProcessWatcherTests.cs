@@ -24,6 +24,23 @@ public sealed class WindowsProcessWatcherTests : IDisposable
     public WindowsProcessWatcherTests()
     {
         Assert.True(File.Exists(Subject), $"The test subject {Subject} is not on this machine.");
+
+        // A running copy of the product will terminate the subject as fast as it
+        // can, and a process that starts and dies inside the one-second WMI
+        // polling window never raises a creation event at all. The failure that
+        // produces says the launch was never seen, which points at the watcher
+        // and not at the real cause, so name the real cause here instead.
+        var live = Process.GetProcessesByName("GameBrake.Tray");
+        foreach (var instance in live)
+        {
+            instance.Dispose();
+        }
+
+        Assert.True(
+            live.Length == 0,
+            "GameBrake.Tray is running and will fight these tests for the subject process. "
+            + "Exit it from the tray icon, then run the suite again.");
+
         KillAnySubject();
     }
 

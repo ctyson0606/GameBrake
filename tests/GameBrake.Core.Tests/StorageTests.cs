@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GameBrake.Core.Storage;
 
 namespace GameBrake.Core.Tests;
@@ -73,14 +74,50 @@ public sealed class StorageTests : IDisposable
             Protected = [new ProtectedApp(AppId, Game, "Foo", Enabled: true)],
         });
 
-        var json = File.ReadAllText(ConfigurationPath);
+        // The exact set, not merely a subset. Assert.Contains can only notice a
+        // key that went missing, never one that turned up uninvited, and an
+        // uninvited key is worse here than an absent one: a computed property
+        // once leaked into the file as a second thing that looked like the
+        // cooldown setting, sat next to the real one, and was ignored on read.
+        using var document = JsonDocument.Parse(File.ReadAllText(ConfigurationPath));
+        var keys = document.RootElement.EnumerateObject().Select(p => p.Name).Order().ToList();
 
-        Assert.Contains("\"cooldownSeconds\"", json);
-        Assert.Contains("\"graceWindowSeconds\"", json);
-        Assert.Contains("\"autostart\"", json);
-        Assert.Contains("\"protected\"", json);
-        Assert.Contains("\"executable\"", json);
-        Assert.Contains("\"displayName\"", json);
+        Assert.Equal(
+            ["autostart", "cooldownSeconds", "graceWindowSeconds", "protected"],
+            keys);
+
+        var entry = document.RootElement.GetProperty("protected")[0]
+            .EnumerateObject().Select(p => p.Name).Order().ToList();
+
+        Assert.Equal(["displayName", "enabled", "executable", "id"], entry);
+    }
+
+    [Fact]
+    public void Everything_a_saved_config_writes_can_be_read_back()
+    {
+        // The defect this guards against was write-only: a property with a getter
+        // and no setter serialises out and is silently dropped on the way in, so
+        // editing it changes nothing.
+        var store = new ConfigurationStore(ConfigurationPath);
+        var original = Configuration.Default with
+        {
+            CooldownSeconds = 30,
+            GraceWindowSeconds = 45,
+            Autostart = false,
+            Protected = [new ProtectedApp(AppId, Game, "Foo", Enabled: true)],
+        };
+
+        store.Save(original);
+        var reloaded = store.Load();
+
+        // Field by field rather than Assert.Equal on the record: Protected is an
+        // IReadOnlyList, and the compiler-generated equality compares that by
+        // reference, so two identical configurations would never match.
+        Assert.Equal(original.CooldownSeconds, reloaded.CooldownSeconds);
+        Assert.Equal(original.GraceWindowSeconds, reloaded.GraceWindowSeconds);
+        Assert.Equal(original.Autostart, reloaded.Autostart);
+        Assert.Equal(original.Protected, reloaded.Protected);
+        Assert.Equal(original.Cooldown, reloaded.Cooldown);
     }
 
     [Fact]

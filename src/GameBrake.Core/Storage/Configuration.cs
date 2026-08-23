@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace GameBrake.Core.Storage;
 
 /// <summary>
@@ -32,6 +34,14 @@ public sealed record Configuration(
         Protected: []);
 
     /// <summary>The two durations the reducer needs, and nothing else.</summary>
+    /// <remarks>
+    /// Kept out of the file. It has a getter and no setter, so it would be
+    /// written and then ignored on the way back in: a second thing in a
+    /// hand-edited file that looks like the setting, sits next to the real one,
+    /// and does nothing. Someone edited it instead of cooldownSeconds and the
+    /// tool went on using the old value without a word.
+    /// </remarks>
+    [JsonIgnore]
     public CooldownConfig Cooldown => new(
         TimeSpan.FromSeconds(CooldownSeconds),
         TimeSpan.FromSeconds(GraceWindowSeconds));
