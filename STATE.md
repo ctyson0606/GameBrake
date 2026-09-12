@@ -1,6 +1,6 @@
 # STATE
 
-> Last updated: 2026-08-23
+> Last updated: 2026-09-12
 
 Current working state. Superseded content is deleted, not archived.
 For durable rules see METHOD.md.
@@ -40,9 +40,11 @@ link of a chain leaves the game running. One entry per game, and it is the binar
 that owns the session.
 
 Installed at %LOCALAPPDATA%\Programs\GameBrake and started from the Run key, so
-it is independent of the build output. The installed copy is
-bin/Release/net10.0-windows copied whole, and the Run key holds an absolute path
-into it. A change reaches daily use only when that copy is repeated.
+it is independent of the build output. What sits there is now the single file
+dist/ holds, replacing the eleven files of bin/Release/net10.0-windows that were
+copied whole until 2026-09-12. The Run key needed no edit across that change and
+was not touched: it already held the absolute path the new file took over. A
+change reaches daily use only when that one file is copied again.
 
 A security review on 2026-08-23 read every source file and turned up one thing
 worth fixing: the single-instance mutex could be taken by anything in the
@@ -60,10 +62,11 @@ what it retains is nothing — see METHOD.md, which now holds that as a rule.
 
 The repository now explains itself to somebody who has not read the source.
 README.md, README.zh-TW.md and README.zh-CN.md cover what the tool is, the four
-phases and the two properties worth knowing about them, building it, copying the
-build output somewhere of its own and pointing the Run key at that copy, every
-key in config.json, and why the game binary is the thing to protect rather than
-the launcher. Everything in them was read out of the source rather than out of
+phases and the two properties worth knowing about them, building it, packing it
+into one self-contained file and copying that somewhere of its own, the
+SmartScreen warning an unsigned file gets on first launch, every key in
+config.json, and why the game binary is the thing to protect rather than the
+launcher. Everything in them was read out of the source rather than out of
 this file. Licensed MIT.
 
 ### Problem
@@ -213,8 +216,10 @@ Two constraints hold this together:
 ## Next Steps
 
 Nothing is outstanding in the code. The Environment facts in AGENTS.md are
-complete: install, dev, test, build and e2e have each been run, and typecheck
-and lint are none for the reasons under Known Annoyances.
+complete: install, dev, test, build, e2e and pack have each been run, and
+typecheck and lint are none for the reasons under Known Annoyances. pack is not
+one of the keys the framework names; it was added because a build command nobody
+lists is a build command the next session does not know exists.
 
 1. Live with it. Whether 300 seconds is the right number, and whether user-mode
    friction is enough (N7), are questions about the user and only use answers
@@ -223,9 +228,17 @@ and lint are none for the reasons under Known Annoyances.
    already written down: a longer cooldown is one config value, and hardening is
    the SYSTEM service under N7.
 
-Packaging is deliberately not started. A copied folder plus the autostart toggle
-is enough until something makes it insufficient, and the README now spells that
-out as the install procedure rather than leaving it recorded only here.
+Packaging goes as far as one file and no further. scripts/pack.ps1 publishes
+self-contained and single-file into dist/, giving a 49.4 MB GameBrake.Tray.exe
+that needs no .NET on the machine it runs on, and the READMEs give that as the
+install procedure: run the script, copy one file, tick Start with Windows. The
+script fails if dist/ ends up holding anything besides that executable, which is
+the only claim it makes.
+
+Nothing beyond that is built: no installer, no Start Menu entry, no entry in
+Add or Remove Programs, and no signature, so every first launch shows SmartScreen.
+An installer was the alternative on the table and was not taken, on the grounds
+that copying one file is already the whole procedure.
 
 ## Open Questions
 
@@ -262,6 +275,23 @@ here says anything about a loaded one.
   cost, which lives in other processes, produced a negative delta and settled
   nothing; that cost is under the noise floor of background WMI activity, which
   is not the same as zero.
+
+Packaging, same machine, 2026-09-12.
+
+- Single-file self-contained: 111 MB uncompressed, 49.4 MB with
+  EnableCompressionInSingleFile. The folder it replaced was eleven files and
+  0.6 MB, which is what borrowing the machine's installed .NET costs instead.
+- Compression does not slow the start. Time from Start-Process to the
+  single-instance mutex existing, five launches each: compressed single file 164,
+  92, 89, 90, 92 ms; the framework-dependent folder it replaced 102, 45, 45, 137,
+  107 ms. Medians 92 and 102 ms, and the two ranges overlap.
+  What this measures is managed Main being entered, since the mutex is taken on
+  its first line. It says nothing about when the watcher is live, which is the
+  number that would matter for how long after login the tool is blind.
+- The installed single file intercepts charmap: terminated after 358 ms and, on a
+  second attempt during the cooldown, 799 ms, both inside the 2 s AC1 allows.
+  cooldownEndsAt read 2026-09-12T09:51:33.6549772Z after both, unchanged, which
+  is AC2 observed rather than inferred from the reducer tests.
 
 ## Decisions
 
@@ -327,6 +357,26 @@ Design-time, in the order they still matter.
   Chinese and read in English, and a translation that exists is read while a
   translation that is promised is not. The cost is that the three have to be
   edited together, which check.sh enforces.
+- One self-contained file rather than a folder of eleven, and rather than an
+  installer. The folder was the thing being complained about: eleven files of
+  which any one going missing is a failure with no symptom until a launch is not
+  intercepted. An installer would add a Start Menu entry and an Add or Remove
+  Programs row, and would cost a build-time dependency on Inno Setup and a second
+  place that writes the Run key — and the Run key is already written by the tray,
+  which means two writers for one value and a question about who clears it. What
+  it would not shorten is the install: copying one file is already the procedure.
+- Compression on, though it is paid at every start rather than once. 111 MB is a
+  file that is awkward to move anywhere; 49 MB is not. It was turned on before
+  being measured and would have been kept either way, which is the wrong order —
+  the measurement showing no cost is luck, not vindication.
+- DebugType none, so no .pdb ships. The 48 KB is not the reason; a single file
+  being single is. The consequence is under Known Annoyances and is real.
+- The published file keeps the name GameBrake.Tray.exe. Shortening it to
+  GameBrake.exe reads better and breaks the single-instance check, which compares
+  process names: the renamed copy and an older installed one cannot see each
+  other, so both run, both watch, and both write state.json. Making the name safe
+  to change means changing that check, which is worth doing only if the name ever
+  needs to change for a reason better than how it looks.
 
 ## What using it changed
 
@@ -430,14 +480,30 @@ suite.
   kill — median 347 ms — the observed process could exit and Windows could
   reissue its pid. Never seen, and the window is small, but it is the only path
   by which this tool could end something nobody asked it to. Recorded, not fixed.
-- The READMEs quote three numbers that nothing keeps in sync: 50 tests, 29 of
-  them free of Windows, and 15 end-to-end checks. They were counted rather than
-  copied when written — 50 [Fact] with no theories and no inline data, 29 of them
-  in GameBrake.Core.Tests, 15 Check calls in scripts/e2e.ps1 — but adding a
-  single test makes all three files wrong, and check.sh compares the translations
-  against each other, never against the suite. Same class of gap as TrayIconArt.
+- The READMEs quote four numbers that nothing keeps in sync: 50 tests, 29 of
+  them free of Windows, 15 end-to-end checks, and the 49 MB of dist/. The first
+  three were counted rather than copied when written — 50 [Fact] with no theories
+  and no inline data, 29 of them in GameBrake.Core.Tests, 15 Check calls in
+  scripts/e2e.ps1 — and the fourth was measured. But adding a single test makes
+  three files wrong, a .NET update moves the fourth, and check.sh compares the
+  translations against each other, never against the suite or the build. Same
+  class of gap as TrayIconArt.
 - config.json and the installed executable are both writable by anything running
   as this user, which can therefore add entries, empty the protected set, or
   replace the tray outright. That is the N7 bargain rather than a separate hole:
   the same access already permits closing the tool. Worth knowing when reading
   the file; not worth defending against.
+- No automated test ever sees a published file. dotnet test builds Debug and
+  scripts/e2e.ps1 runs the Debug executable, so the whole single-file path — the
+  runtime pack, the self-extraction of native libraries, compression — is covered
+  only by someone running dist/GameBrake.Tray.exe by hand and watching. It was
+  run by hand on 2026-09-12 and it worked. That is one cycle, and the file is
+  rebuilt every time anything changes.
+- No .pdb ships with the installed executable, so a crash there yields a stack
+  trace with no file or line numbers. Nothing has ever crashed, which is why this
+  is an annoyance and not a decision to revisit; the day it does crash is the day
+  it will be missed, and the answer then is to reproduce against a Debug build.
+- The eleven-file folder that was installed until 2026-09-12 was moved to a
+  session-scoped temporary directory rather than deleted, so treat it as gone.
+  If the single file turns out to be wrong, the way back is scripts/pack.ps1 or
+  a plain dotnet build, not that folder.

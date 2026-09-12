@@ -143,6 +143,27 @@ test counts were stale, when the file on disk already carried the right numbers.
 Open the file. The cost is one command, and the failure mode is telling someone
 something untrue about their own repository.
 
+### The artifact that ships is not the artifact the tests ran against
+
+dotnet test and scripts/e2e.ps1 both build and exercise Debug output. What is
+installed and used every day is a published, self-contained, compressed single
+file, and everything that makes it that — the runtime pack, the self-extraction
+of native libraries, the compression — sits on the far side of every test in the
+suite. Fifty passing tests say nothing whatsoever about it.
+
+Twice now the distinction has decided what counted as evidence. The
+single-instance fix was confirmed against the installed executable rather than
+the build output, which reads as ordinary thoroughness until the same question
+arrives from the other direction: the packaging change could only be verified by
+running the published file by hand, because no test in the repository can reach
+it.
+
+So when a change alters how the thing is built or delivered rather than what it
+computes, the suite is not the evidence and running it is not the check. Run the
+file a user would run, from the place they would run it from, and report that as
+what was run. Where no test can reach the shipped form, write the gap down;
+leaving it implied means the next green run gets believed again.
+
 ## Anti-Patterns
 
 ### Namespacing the single-instance mutex instead of verifying what holds it

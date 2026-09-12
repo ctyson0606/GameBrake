@@ -52,7 +52,8 @@ running   --you quit-->      back to idle; the next session pays a fresh cooldow
 
 - Windows 10 或 11（x64）。只支持 Windows，没有其他平台。
 - 构建需要 [.NET SDK 10.0](https://dotnet.microsoft.com/download) 或更新版本。已在
-  SDK 10.0.400 上验证过。
+  SDK 10.0.400 上验证过。只有负责构建的那台电脑需要它：构建出来的东西自己带着一份
+  .NET，可以在完全没有 .NET 的电脑上运行。
 - 不需要管理员权限。构建时和运行时都不会要。
 
 ---
@@ -85,15 +86,21 @@ dotnet run --project src/GameBrake.Tray
 
 ## 安装一份自己的
 
-构建输出在你 clone 的目录里，所以任何重新构建或清理都会动到你每天在用的那一份。把它
-复制到一个属于它自己的位置：
+构建输出是你 clone 目录里一整包零散的文件，任何重新构建或清理都会动到你每天在用的
+那一份。把它打包成一个属于它自己的文件：
 
 ```powershell
-$source = "src/GameBrake.Tray/bin/Release/net10.0-windows"
+powershell -ExecutionPolicy Bypass -File scripts/pack.ps1
+```
+
+这会产生 `dist/GameBrake.Tray.exe`，一个约 49 MB 的独立可执行文件，自己带着一份
+.NET。跑它的那台电脑什么都不用装 —— 不用 SDK，也不用运行时。放到你要的位置再启动：
+
+```powershell
 $target = "$env:LOCALAPPDATA/Programs/GameBrake"
 
 New-Item -ItemType Directory -Force $target
-Copy-Item "$source/*" $target -Recurse -Force
+Copy-Item "dist/GameBrake.Tray.exe" $target -Force
 
 Start-Process "$target/GameBrake.Tray.exe"
 ```
@@ -102,8 +109,13 @@ Start-Process "$target/GameBrake.Tray.exe"
 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，值名称是 `GameBrake`，所以随着
 登录启动的是那份「已安装」的副本，而不是构建输出。
 
-> **更新。** 你构建出来的改动，要重复做一次上面的复制，才会真的进到日常使用。先从菜
-> 单退出工具，否则文件会被占用。
+> **第一次启动会跳 SmartScreen 警告。**「Windows 已保护你的电脑」，真正的按钮藏在
+> **详细信息** → **仍要运行** 后面。这个可执行文件没有代码签名，而签名证书是唯一能
+> 让它消失的东西。这个警告跟这个工具本身无关：任何没签名、又还没几个人下载过的可执
+> 行文件都会跳。
+
+> **更新。** 你构建出来的改动，要重复做一次上面两个步骤，才会真的进到日常使用。先从
+> 菜单退出工具，否则文件会被占用。
 
 卸载的方式：从菜单退出，取消勾选 **Start with Windows**（或直接删掉那个 `Run` 值），
 然后删除 `%LOCALAPPDATA%\Programs\GameBrake` 和 `%APPDATA%\GameBrake`。

@@ -480,3 +480,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# scripts/pack.ps1 writes the single-file build here. It is 49 MB of build
+# output, not source.
+dist/

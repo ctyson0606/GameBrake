@@ -49,7 +49,8 @@ launch is permitted.
 
 - Windows 10 or 11 (x64). Windows only — there is no other platform.
 - [.NET SDK 10.0](https://dotnet.microsoft.com/download) or newer, to build it.
-  Verified on SDK 10.0.400.
+  Verified on SDK 10.0.400. Only the machine that builds it needs this: what the
+  build produces carries its own .NET and runs on a machine with none.
 - No administrator rights. The application asks for none, at build time or run
   time.
 
@@ -83,16 +84,23 @@ An icon appears in the notification area. Right-click it for the menu.
 
 ## Install your own copy
 
-The build output lives inside your clone, so anything that rebuilds or cleans the
-repository disturbs the copy you use every day. Copy it somewhere of its own
-instead:
+The build output is a folder of loose files inside your clone, and anything that
+rebuilds or cleans the repository disturbs the copy you use every day. Pack it
+into a file of its own instead:
 
 ```powershell
-$source = "src/GameBrake.Tray/bin/Release/net10.0-windows"
+powershell -ExecutionPolicy Bypass -File scripts/pack.ps1
+```
+
+That writes `dist/GameBrake.Tray.exe`, a single self-contained executable of
+about 49 MB carrying its own copy of .NET. The machine that runs it needs nothing
+installed — no SDK and no runtime. Put it where you want it and start it:
+
+```powershell
 $target = "$env:LOCALAPPDATA/Programs/GameBrake"
 
 New-Item -ItemType Directory -Force $target
-Copy-Item "$source/*" $target -Recurse -Force
+Copy-Item "dist/GameBrake.Tray.exe" $target -Force
 
 Start-Process "$target/GameBrake.Tray.exe"
 ```
@@ -102,8 +110,14 @@ absolute path into `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` under th
 value name `GameBrake`, so the installed copy — not the build output — is what
 starts with your session.
 
-> **Updating.** A change you build reaches daily use only when you repeat the
-> copy above. Exit the tray first, or the files will be in use.
+> **The first start shows a SmartScreen warning.** "Windows protected your PC",
+> with the real button hidden behind **More info** → **Run anyway**. The
+> executable is not code-signed, and a signing certificate is the only thing that
+> removes it. Nothing about the warning is specific to this tool: an unsigned
+> executable few people have downloaded gets it.
+
+> **Updating.** A change you build reaches daily use only when you repeat both
+> steps above. Exit the tray first, or the file will be in use.
 
 To uninstall: exit from the tray menu, untick **Start with Windows** (or delete
 that `Run` value), then delete `%LOCALAPPDATA%\Programs\GameBrake` and
