@@ -6,18 +6,25 @@ STATE.md.
 
 ## Classification (apply in order)
 
-1. Useful again in a future task?              -> METHOD.md
-2. Meaningless once this task closes?          -> STATE.md
-3. A decision?                                 -> principle to METHOD,
+1. Part of the approved contract (goals,
+   criteria, a data or API shape)?             -> SPEC.md, and only through
+                                                  the spec gate
+2. About SparkForge itself rather than this
+   project (kit/, the stubs, the scripts)?     -> STATE.md -> Upstream
+3. Useful again in a future task?              -> METHOD.md
+4. Meaningless once this task closes?          -> STATE.md
+5. A decision?                                 -> principle to METHOD,
                                                   specific choice and its
                                                   situational reason to STATE
-4. Already recorded by the repo (code layout,
+6. Already recorded by the repo (code layout,
    git history, config files)?                 -> record nothing
-5. A rejected approach with a reason?          -> METHOD -> Anti-Patterns
-6. Tied to a specific library or tool version? -> GOTCHAS.md
+7. A rejected approach with a reason?          -> METHOD -> Anti-Patterns
+8. Tied to a specific library or tool version? -> GOTCHAS.md
 
 ## Update semantics
 
+SPEC.md     changes only through the spec gate, with approval. Rewrite what
+            no longer holds in place; never append a second spec.
 METHOD.md   accumulates. Correct a rule in place rather than appending a
             contradicting one. Deleting requires a stated reason.
 STATE.md    is replaced. Drop anything no longer true. git holds history.

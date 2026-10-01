@@ -81,6 +81,27 @@ result that has not answered the question.
 
 <!-- source: METHOD.md 94-100 -->
 
+### Aim the scenario as well as the sabotage.  `[T0]` `[2026-10-01]`
+
+Before trusting an assertion, name the configuration in which the code under
+test is necessary — the narrowest screen, the input with gaps, the case where
+nothing else would do the job — and assert there. A check that runs only where
+the feature is redundant passes whether or not the feature exists, and a
+sabotage run there passes too, which reads as the sabotage having missed.
+
+> Evidence: Two projects. A grid meant to narrow its columns on a phone was
+> checked at 390px, and a sabotage that froze the columns passed the whole
+> script: seven fixed-width days fit 390px anyway. At 320px the frozen grid
+> overflowed, and the same sabotage failed at once. In the other, an
+> acceptance criterion said a protected program had to be closed within two
+> seconds of its window appearing, and named notepad.exe, which on Windows 11
+> starts a stub that exits by itself while a different process owns the
+> window. Approved and reviewed, it would have been satisfied by the stub
+> disappearing while the window stayed open. Only running it showed that, and
+> the subject became a plain program nothing else closes.
+
+<!-- source: TempTime METHOD.md, after the copy in source/; promoted 2026-10-01 -->
+
 ### Confirm the sabotage landed before reading the result.  `[T0]`  `[2026-08-12]`
 
 An injection that silently did nothing and a check that correctly passes
@@ -281,3 +302,70 @@ catches a section dropped during translation.
 > without suspecting the document. Both checks together took one command.
 
 <!-- source: METHOD.md 337-344 -->
+
+### The platform that produces a file cannot report that the file is broken on another platform.  `[T0]` `[2026-08-12]`
+
+Anything written on one machine carries properties that machine does not
+enforce and therefore cannot check: line endings, an executable bit, file
+permissions, a lockfile's platform. A check run where the file was produced
+passes whatever those properties are. Assert what the repository records
+against the index rather than the working tree, since the index is what other
+platforms receive. Prove the rest on the platform that enforces it, and say so
+where that has not happened.
+
+> Evidence: Three projects, all produced on Windows. A lockfile written there
+> omitted a dependency only macOS installs, and the first clean install on
+> macOS refused outright. A script committed with CRLF ran where it was
+> written and failed elsewhere with a bad interpreter; a version file came out
+> with a trailing carriage return that a string comparison would have read as
+> a permanent mismatch; an executable bit was recorded as absent, leaving the
+> scripts unrunnable on every platform that honours it. A generated password
+> kept a carriage return nobody could see, so it could never be typed back.
+> And a permission failure the project had to guard against could not be
+> reproduced there at all, because Docker Desktop shows every bind-mounted
+> file with every permission set.
+
+<!-- source: SparkForge METHOD.md; promoted 2026-10-01 -->
+
+### A restatement is a copy, and nothing keeps an unguarded copy true.  `[T1]` `[2026-08-20]`
+
+Where something has to be said in a second place, there are three outcomes and
+only two of them are chosen. Point at the original and state nothing. Restate
+it and add something that diffs the two. Or restate it and find out later.
+
+The test is whether the restatement can be compared mechanically against what
+it describes. A layout, a numbered procedure, a recorded status, what a piece
+of code does: each of those is diffable against the thing itself, so a copy of
+one that nothing diffs is already waiting to go false. Copies that cannot be
+diffed are a different problem and this rule does not reach them.
+
+> Evidence: Two projects. A README restated its project's layout, its setup
+> procedure and one component's execution record; all three were false within
+> four commits, and no change that falsified one reported anything. In the
+> other, a code comment said the top step of a colour scale meant everyone had
+> answered, and the arithmetic stopped delivering that above five people, so
+> six of seven and seven of seven drew the same colour — the one answer the
+> page existed to show. The fix there was the first outcome: the legend's
+> labels are now computed by the function that colours a cell, so there is no
+> second copy left to drift.
+
+<!-- source: SparkForge METHOD.md; promoted 2026-10-01 -->
+
+### Fixtures you wrote share your assumptions; one real artefact does not.  `[T1]` `[2026-10-01]`
+
+A synthetic suite proves the cases its author thought of, because the same
+head wrote the code and the cases. Before concluding that the code is fine and
+the problem is elsewhere, run it on one real input from the world it will
+meet: the user's actual file, the real program, the production record.
+
+> Evidence: Two projects. Asked why a calendar import did nothing, seven
+> synthetic .ics files covering every shape that seemed to matter all passed,
+> and the conclusion drawn was that the parser was fine. The user's actual
+> export threw on its first recurrence rule, on a property none of the seven
+> used. In the other, a tool that ends chosen programs passed every test
+> against a plain system program and did nothing to the game it was built for:
+> under that game's anti-cheat the process listing it relied on reports no
+> path, and the watcher discarded every start it could not name. Only running
+> the real game found it.
+
+<!-- source: TempTime METHOD.md, after the copy in source/; promoted 2026-10-01 -->

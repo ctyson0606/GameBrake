@@ -9,4 +9,4 @@ in front of you. Read it at the start of every session, not only the first.
 
 This file exists only to point at `AGENTS.md`. Do not put instructions here:
 they belong in `AGENTS.md`, and this project's own knowledge belongs in
-`METHOD.md`, `STATE.md` and `GOTCHAS.md`.
+`SPEC.md`, `METHOD.md`, `STATE.md` and `GOTCHAS.md`.

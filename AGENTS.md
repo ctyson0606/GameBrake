@@ -15,7 +15,16 @@ e2e: powershell -ExecutionPolicy Bypass -File scripts/e2e.ps1
 pack: powershell -ExecutionPolicy Bypass -File scripts/pack.ps1
 # Leave blank if not yet established. Write "none" if this project
 # genuinely has no such command — "none" is itself a finding and must
-# be reported in any verification, not silently skipped.
+# be reported in any verification, not silently skipped. Put the reason
+# after it as a comment: "not applicable" (a language whose type check is
+# its build) and "not set up yet" (no linter chosen) both read as a bare
+# "none", and only the second is a gap.
+# Add a line for any other command the project depends on, such as a
+# packaging step. A command nobody lists is one the next session does not
+# know exists.
+# scripts/check.sh is never a value here, nor an acceptance criterion. It
+# checks this framework's layout, so no defect in the project can make it
+# fail.
 
 ## Hard rules (always apply, regardless of tier)
 - Stop and ask when a requirement is vague. Do not fill the gap with an assumption.
@@ -26,9 +35,12 @@ pack: powershell -ExecutionPolicy Bypass -File scripts/pack.ps1
 - When proposing something larger than what was asked, first state why the
   smaller version is insufficient.
 - Write English into every file: code, identifiers, commit messages, and
-  METHOD.md, STATE.md and GOTCHAS.md. Talking to the user, and the README,
-  follow whatever language they ask for. A memory file that accumulated in
-  two languages is what this prevents, and it only accumulates.
+  SPEC.md, METHOD.md, STATE.md and GOTCHAS.md. Talking to the user, and the
+  README, follow whatever language they ask for. A memory file that
+  accumulated in two languages is what this prevents, and it only accumulates.
+- Write memory as you go, not when asked: the moment state changes, by
+  kit/skills/memory-update.md. The memory files are always in scope. A session
+  can stop without warning, and what was not written is lost with it.
 
 ## Tiers
 T0  free — do it under any time pressure
@@ -67,19 +79,25 @@ project does not use a tool, delete its entry.
 
 kit/ holds the canonical content. Each tool-specific directory
 (.claude/, and one per additional agent tool) holds thin stubs that
-point into kit/. Edit kit/, never the stubs.
+point into kit/, and so does scripts/: its two files hand over to
+kit/scripts/. Edit kit/, never the stubs.
 Do not edit anything under kit/ inside a project that consumes
 this framework — send the change upstream and pull it back with
 scripts/update-kit.sh. This project's own knowledge lives only in
-METHOD.md, STATE.md and GOTCHAS.md, which are never overwritten.
+SPEC.md, METHOD.md, STATE.md and GOTCHAS.md, which are never
+overwritten.
 scripts/check.sh verifies the invariants of this layout. Run it after
 any change to kit/, the stubs, or AGENTS.md itself.
-When sending an improvement upstream, review the Unverified block in
-the upstream STATE.md and tick off anything this project exercised.
-A rule that has now been walked is a finding worth more than the
-improvement itself.
+Anything that belongs to SparkForge rather than to this project — a
+rule that proved wrong or useless here, a check that missed something,
+a stub or script that did not work, a framework rule this project was
+the first to actually walk — goes under Upstream in STATE.md, written
+as you go like the rest of memory. Leave it there until upstream has
+it. That section is the only thing upstream reads from a project, and
+a note kept anywhere else is never found.
 
 ## Memory
+@SPEC.md
 @METHOD.md
 @STATE.md
 @GOTCHAS.md

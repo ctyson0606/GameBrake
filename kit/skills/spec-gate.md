@@ -27,6 +27,15 @@ Once, at the start, producing one page:
 - The smallest contract that lets several people work in parallel: data
   shapes, API shapes.
 
+## Where it goes
+
+What a person approves is written into SPEC.md, under the section it belongs
+to, and nowhere else. A later run of the gate rewrites the parts its feature
+changes rather than appending a second spec beside the first. STATE.md only
+points at the part being built now: it is replaced as work moves, and a
+contract kept there either goes with it or keeps the file from ever being
+cleared.
+
 ## Mandatory triggers
 
 Regardless of MODE, the gate must be run for any change that touches:
