@@ -36,7 +36,24 @@ cleanup() { rm -rf "$tmp" "$SPARKFORGE_UPDATE_COPY"; }
 trap cleanup EXIT
 
 echo "Fetching $UPSTREAM ($REF)"
-git clone --quiet --depth 1 --branch "$REF" "$UPSTREAM" "$tmp/upstream"
+# Never ask for a login. Whoever runs this may be an agent that cannot answer a
+# prompt, and Git Credential Manager waits for an answer indefinitely: the first
+# run against an upstream that needed a login sat there until it was killed.
+# Fail instead, before anything here is touched, and say what to pass.
+if ! GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never \
+     git clone --quiet --depth 1 --branch "$REF" "$UPSTREAM" "$tmp/upstream"; then
+  ssh_url="$(printf '%s' "$UPSTREAM" | sed -n 's#^https://github\.com/#git@github.com:#p')"
+  {
+    echo
+    echo "error: could not fetch $UPSTREAM ($REF). Nothing in this project changed."
+    echo "If it needs a login, this script will not ask for one. Pass a URL you can"
+    echo "reach without one instead, or set SPARKFORGE_UPSTREAM to it."
+    if [ -n "$ssh_url" ]; then
+      echo "Over SSH that is:  scripts/update-kit.sh $ssh_url"
+    fi
+  } >&2
+  exit 1
+fi
 
 SRC="$tmp/upstream/template/kit"
 if [ ! -d "$SRC" ]; then
