@@ -82,7 +82,8 @@ Components headings in SPEC.md. translations/zh-TW.md does not exist yet, so the
 page shows English. A draft adding milestones, components, goal tags and Means
 and Try lines to SPEC.md awaits the user's approval and is not applied; SPEC.md
 changes only through the spec gate. Until it is applied the page lists those
-sections as gaps. The ten status lines under Acceptance status come from commands
+sections as gaps. G3 and G5 have no acceptance criterion, which the page also lists
+and the draft leaves open for the user to decide. The ten status lines under Acceptance status come from commands
 run on that date.
 
 Nothing is outstanding in the code. The Environment facts in AGENTS.md are
