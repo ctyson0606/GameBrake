@@ -1,6 +1,6 @@
 # STATE
 
-> Last updated: 2026-10-01
+> Last updated: 2026-10-04
 
 Current working state. Superseded content is deleted, not archived.
 For durable rules see METHOD.md.
@@ -76,6 +76,15 @@ gave the spec a file of its own.
 
 ## Next Steps
 
+SparkForge kit 0.6.0 and its progress page were installed on 2026-10-04:
+kit/, the two progress stubs, TRANSLATION: zh-TW, and empty Milestones and
+Components headings in SPEC.md. translations/zh-TW.md does not exist yet, so the
+page shows English. A draft adding milestones, components, goal tags and Means
+and Try lines to SPEC.md awaits the user's approval and is not applied; SPEC.md
+changes only through the spec gate. Until it is applied the page lists those
+sections as gaps. The ten status lines under Acceptance status come from commands
+run on that date.
+
 Nothing is outstanding in the code. The Environment facts in AGENTS.md are
 complete: install, dev, test, build, e2e and pack have each been run, and
 typecheck and lint are none for the reasons under Known Annoyances. pack is not
@@ -119,6 +128,17 @@ Two remain deliberately deferred:
   out to be insufficient in practice — a question about the user, not the code.
 
 ## Acceptance status
+
+- AC1: claimed — the decision half passed (`dotnet test tests/GameBrake.Core.Tests`: 29 passed; `dotnet test tests/GameBrake.Windows.Tests --filter "FullyQualifiedName!~WindowsProcessWatcherTests"`: 17 passed, including First_launch_is_terminated_and_starts_the_cooldown and A_protected_launch_is_terminated_and_the_cooldown_is_written_to_disk), but the 2 s real-process half was not run: `dotnet test` refused its 4 WindowsProcessWatcherTests because GameBrake.Tray was running, and `scripts/e2e.ps1` was not run, see Known Annoyances. Closed earlier per 4c1ad4f, which says all ten were closed (2026-10-04)
+- AC2: evidenced — `dotnet test tests/GameBrake.Core.Tests` and `dotnet test tests/GameBrake.Windows.Tests --filter "FullyQualifiedName!~WindowsProcessWatcherTests"` passed, covering Retrying_during_the_cooldown_is_terminated_and_does_not_move_the_deadline and the engine version of it, against a fake terminator; the real-process version lives in e2e and was not run (2026-10-04)
+- AC3: evidenced — `dotnet test tests/GameBrake.Core.Tests` and `dotnet test tests/GameBrake.Windows.Tests --filter "FullyQualifiedName!~WindowsProcessWatcherTests"` passed, covering Launch_inside_the_grace_window_is_allowed_and_runs, A_permitted_session_is_never_interrupted and A_permitted_launch_is_left_running_and_followed, with a fake watcher (2026-10-04)
+- AC4: evidenced — `dotnet test tests/GameBrake.Core.Tests` and `dotnet test tests/GameBrake.Windows.Tests --filter "FullyQualifiedName!~WindowsProcessWatcherTests"` passed, covering A_lapsed_grace_window_costs_a_full_cooldown_again in the reducer and in the engine, on an injected clock (2026-10-04)
+- AC5: evidenced — `dotnet test tests/GameBrake.Core.Tests` and `dotnet test tests/GameBrake.Windows.Tests --filter "FullyQualifiedName!~WindowsProcessWatcherTests"` passed, covering Quitting_and_relaunching_is_charged_a_fresh_cooldown and Quitting_returns_to_idle_so_the_next_launch_is_charged_again; the real exit event (WindowsProcessWatcherTests) was not run, as for AC1 (2026-10-04)
+- AC6: evidenced — `dotnet test tests/GameBrake.Core.Tests` and `dotnet test tests/GameBrake.Windows.Tests --filter "FullyQualifiedName!~WindowsProcessWatcherTests"` passed, covering An_unprotected_executable_matches_nothing and An_unprotected_launch_is_not_touched_and_writes_nothing; the real msinfo32 check lives in e2e and was not run (2026-10-04)
+- AC7: claimed — the file half passed (`dotnet test tests/GameBrake.Core.Tests` and `dotnet test tests/GameBrake.Windows.Tests --filter "FullyQualifiedName!~WindowsProcessWatcherTests"`: A_cooldown_charged_before_a_restart_is_still_owed_after_one, A_deadline_survives_the_round_trip_to_the_exact_instant, A_new_engine_over_the_same_file_still_owes_what_the_last_one_charged), but surviving a Windows restart cannot be run by a command here; the measured reboot is recorded in Current Focus, closed in 4c1ad4f (2026-10-04)
+- AC8: claimed — nothing automated judges whether the remaining time is visible without hunting; the engine tests only check the text and countdown (A_refused_launch_says_so_and_says_how_long_is_left, Remaining_time_counts_down_without_any_event_arriving), and TrayIconArt has no test. Judged by the user after d4c5377 and 2dfb261 (2026-10-04)
+- AC9: evidenced — `Get-Process GameBrake.Tray` TotalProcessorTime read twice 60 s apart on the user's running installed copy (pid 15272, idle, nothing launched): 0 ms of CPU over 60.0 s, 0.000 percent of one core against the 1 percent threshold e2e uses; read-only, nothing restarted (2026-10-04)
+- AC10: evidenced — `dotnet test tests/GameBrake.Core.Tests`: 29 passed, Passed! Failed 0. GameBrake.Core targets net10.0 rather than net10.0-windows, so no Windows API is reachable from it, and none of ReducerTests or StorageTests starts a process (2026-10-04)
 
 ## Measurements
 
@@ -324,6 +344,12 @@ suite.
   file grows and reading it by hand is confusing. Four orphans are in there now,
   against one live entry, and the count only goes up as protected applications
   are tried and dropped.
+- scripts/e2e.ps1 was not run on 2026-10-04, when the installed tray was running.
+  Besides writing the real config, it kills every GameBrake.Tray process by name,
+  and GameBrakePaths reads the folder through GetFolderPath, which an APPDATA
+  override does not move, so there was no way to isolate it without editing code.
+  Likewise `dotnet test` refuses its 4 WindowsProcessWatcherTests while the tray
+  runs, so the real-process half of AC1 and AC5 has no run evidence from that date.
 - scripts/e2e.ps1 writes to the real %APPDATA%\GameBrake, because that is where
   the tool it tests looks. Running it replaces config.json and state.json.
   Anything real in there should be copied aside first.
@@ -369,3 +395,20 @@ suite.
   a plain dotnet build, not that folder.
 
 ## Upstream
+
+- update-kit.sh copied kit/scripts/progress.sh in as mode 100644, although the
+  upstream index holds it as 100755, so check.sh failed on "shell scripts not
+  executable in the index" straight after an update to 0.6.0. Fixed here with
+  `git update-index --chmod=+x kit/scripts/progress.sh`. Any new .sh arriving in
+  kit/ will do the same.
+- The 0.6.0 install needed hand edits update-kit.sh does not make, and nothing
+  lists them: the scripts/progress.sh and progress.ps1 stubs, the TRANSLATION
+  declaration, the translations/ exception to the English rule and the progress
+  paragraph in AGENTS.md, an Acceptance status heading in STATE.md, and
+  Milestones and Components headings in SPEC.md. Found by diffing AGENTS.md
+  against template/AGENTS.md; check.sh reported none of them missing.
+- The progress page counts a status line as evidenced only with a command in
+  inline code. scripts/e2e.ps1 could not be that command here, see Known
+  Annoyances, so AC1 to AC8 are evidenced or claimed from `dotnet test` alone.
+  A project whose end-to-end script cannot run beside the live tool has no
+  evidence for the real-process half of its criteria, and nothing in the kit says so.
