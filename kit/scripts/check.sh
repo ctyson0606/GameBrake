@@ -31,6 +31,8 @@ REQUIRED=(
   .gitattributes kit/VERSION kit/entry-points.txt
   scripts/check.sh scripts/update-kit.sh
   kit/scripts/check.sh kit/scripts/update-kit.sh kit/scripts/rule-checks.sh
+  scripts/progress.sh scripts/progress.ps1
+  kit/scripts/progress.sh kit/scripts/progress.ps1
 )
 # CLAUDE.md is deliberately not in this list. It is one tool's entry file among
 # several, and a project using none of the tools that need one may delete it.
@@ -49,7 +51,7 @@ else pass "required files present"; fi
 # reports nothing. That is what a project installed before this layout has
 # until its stubs are copied in once by hand.
 bad=""
-for s in check.sh update-kit.sh; do
+for s in check.sh update-kit.sh progress.sh progress.ps1; do
   [ -f "$ROOT/scripts/$s" ] || continue
   grep -q "kit/scripts/$s" "$ROOT/scripts/$s" || bad="$bad; scripts/$s does not hand over to kit/scripts/$s"
   [ "$(grep -cvE '^[[:space:]]*(#|$)' "$ROOT/scripts/$s")" -le 1 ] || \
