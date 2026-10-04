@@ -118,6 +118,8 @@ Two remain deliberately deferred:
 - Hardening to a SYSTEM service (N7). Revisit only if user-mode friction turns
   out to be insufficient in practice — a question about the user, not the code.
 
+## Acceptance status
+
 ## Measurements
 
 All on this machine, unelevated, 2026-08-23. Idle machine throughout; nothing

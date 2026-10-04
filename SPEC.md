@@ -16,6 +16,8 @@ for work; willpower is the thing already failing. What is missing is a
 deliberate gap between impulse and play, applied only to chosen applications,
 charged again on every session.
 
+## Milestones
+
 ## Goals
 
 - G1  Every launch of a user-selected Windows executable is interrupted, and
@@ -75,6 +77,8 @@ defeated by triggering every cooldown in the morning and playing freely after.
 
 AC4 and AC7 both assert that something does not happen, which is what makes
 them the two most likely to be silently skipped.
+
+## Components
 
 ## Data and API contract
 
