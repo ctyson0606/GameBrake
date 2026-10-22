@@ -1,133 +1,111 @@
-# GameBrake
+<!-- Hero -->
+<div align="center">
+  <h1>GameBrake</h1>
+  <p><b>给你选定的游戏踩刹车的 Windows 托盘程序</b>：一启动就立刻关掉并开始冷却，等完冷却才能运行。</p>
+  <p>
+    <img alt="platform: Windows 10 | 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-4d6bfe">
+    <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-4d6bfe">
+    <img alt="admin rights: none" src="https://img.shields.io/badge/admin%20rights-none-brightgreen">
+    <img alt="license: MIT" src="https://img.shields.io/badge/license-MIT-blue">
+  </p>
+  <p>🌏 简体中文 · <a href="./README.zh-TW.md">繁體中文</a> · <a href="./README.md">English</a></p>
+</div>
 
-[English](README.md) · [繁體中文](README.zh-TW.md) · **简体中文**
+<!-- Screenshot placeholder: commit the image at docs/screenshot.png, then remove this comment pair.
+<p align="center"><img src="docs/screenshot.png" alt="GameBrake 的托盘图标正在倒数" width="480"></p>
+-->
 
-一个 Windows 系统托盘工具，在「想玩」和「开始玩」之间，硬塞进一段刻意的等待。
+想玩的冲动和真的开始玩之间，什么都没有隔着：双击一下距离就没了，等你意识到代价时，这一局已经开始。GameBrake 把这段距离重新打开。它卖的是阻力，不是强制——它用你自己的账户运行，任务管理器就能关掉它，而关掉它本身就是一次停顿。
 
-想玩的冲动和真的玩下去之间，其实什么都没有隔着——双击一下，距离就没了，等你察觉到
-代价的时候，这一场已经开始了。GameBrake 把那道间隔重新撑开。当你启动一个被你放上
-刹车的程序，它会立刻被关掉，并开始倒数冷却。等完了，你会得到一段短短的窗口期，在那
-段时间内启动就会被放行。不在清单上的东西，完全不受影响。
+## ✨ 功能
 
-它卖的是摩擦力，不是强制力。它以你自己的用户身份运行，可以从任务管理器关掉——这是
-刻意的设计决定，不是疏漏。关掉它这个动作，本身就是一次停顿。
+- **只拦你选的**：列表上的任何可执行文件都可以，不限游戏；其他一切完全不受影响。
+- **每一局收一次冷却**：每次开始一局都要等一次，不是一辈子一次，也不是一天一次。
+- **宽限时间**：冷却结束后有一段时间允许启动；错过了，下一次启动又要重新等。
+- **重启也不会清掉**：期限以绝对时间存在磁盘上，冷却中途重启 Windows 不会清除。
+- **倒数画在图标上**：一个逐渐消失的圆环加上剩余分钟数，等待时是红色，允许启动时变绿色。
+- **随时修改**：用托盘菜单，或直接改 `config.json`，保存后立刻重新加载。
+- **不需要管理员权限**：构建和运行时都不要求。
 
----
+## 🚀 安装
 
-## 运作方式
+前提：Windows 10 或 11（x64），以及构建用的那台电脑上的 [.NET SDK 10.0](https://dotnet.microsoft.com/download)。构建出来的文件自带 .NET，在没装 .NET 的电脑上也能运行。
 
-每个受保护的程序在四个阶段之间移动：
+**方式一 · 单个自包含文件**
 
+```powershell
+git clone https://github.com/ctyson0606/GameBrake.git
+cd GameBrake
+powershell -ExecutionPolicy Bypass -File scripts/pack.ps1
+
+$target = "$env:LOCALAPPDATA/Programs/GameBrake"
+New-Item -ItemType Directory -Force $target
+Copy-Item "dist/GameBrake.Tray.exe" $target -Force
+Start-Process "$target/GameBrake.Tray.exe"
 ```
-idle      --launch-->        terminate the process; start a cooldown (default 300 s)
+
+然后在托盘图标上右键，勾选 **Start with Windows**，这样随你登录启动的是安装好的那份，而不是构建输出。
+
+**方式二 · 直接从源码运行**
+
+<details>
+<summary>不想安装、只想试一下时用这个</summary>
+
+```powershell
+dotnet run --project src/GameBrake.Tray
+```
+
+</details>
+
+**验证**
+
+```powershell
+Get-Process GameBrake.Tray
+```
+
+会列出一个进程，通知区域也会出现它的图标。未签名的文件第一次启动时会显示 **Windows 已保护你的电脑**：选 **更多信息** → **仍要运行**。
+
+## 🕹️ 使用
+
+### 选择要拦的程序
+
+在托盘图标上右键，选 **Protect an application...**，再选一个 `.exe`。菜单会列出每个受保护的条目和它当前的阶段。
+
+### 启动时会发生什么
+
+```text
+idle      --launch-->        terminate the process; start a cooldown
 cooling   --launch-->        terminate again; the remaining time is NOT extended
-cooling   --time passes-->   unlocked, for a grace window (default 300 s)
+cooling   --time passes-->   unlocked, for a grace window
 unlocked  --launch-->        allowed; runs as long as you like
 unlocked  --grace expires--> back to idle; the next launch pays in full again
 running   --you quit-->      back to idle; the next session pays a fresh cooldown
 ```
 
-上面那四个阶段名称，就是 `state.json` 里实际会写进去的值。逐行读作：
+宽限时间从冷却的期限算起，而不是从工具发现期限已过的那一刻，所以睡过整段冷却也不能把它拉长。
 
-- `idle`（闲置）遇到启动：终止该进程，开始冷却（默认 300 秒）。
-- `cooling`（冷却中）遇到启动：再次终止，而且剩余时间**不会**被延长。
-- `cooling` 等到时间到：进入 `unlocked`，并持有一段宽限期（默认 300 秒）。
-- `unlocked`（放行中）遇到启动：允许，之后想跑多久都可以。
-- `unlocked` 的宽限期过完却没去启动：回到 `idle`，下次启动重新付满整段冷却。
-- `running`（运行中）你自己关掉游戏：回到 `idle`，下一场重新付一段新的冷却。
+### 更新你的那份
 
-有两个性质值得知道：
+改动只有重新打包、重新复制后才会进到日常使用：先从托盘菜单退出程序，再把方式一的最后五行运行一次，然后启动它。
 
-- **冷却会撑过重启。** 在冷却中间重启 Windows 并不会把它清掉。截止时间是以绝对时间
-  写在磁盘上的文件里。
-- **宽限期是从冷却的截止时间起算**，而不是从工具「发现它过期」的那一刻起算。所以让
-  电脑睡过整段冷却，并不能把宽限期撑长成一个绕道。
+### 卸载
 
-剩余时间直接画在托盘图标上：一圈逐渐消耗的环，中间是剩下的分钟数，等待中是红色，可
-以启动了就转成绿色。
+从托盘菜单退出程序，取消勾选 **Start with Windows**，再删除 `%LOCALAPPDATA%\Programs\GameBrake` 和 `%APPDATA%\GameBrake`。
 
----
+## 🎮 保护游戏本体，不是启动器
 
-## 需求
+启动器和游戏是不同的可执行文件；要拦的是游戏。很多启动器从登录起就常驻，根本没有“启动”可以拦。
 
-- Windows 10 或 11（x64）。只支持 Windows，没有其他平台。
-- 构建需要 [.NET SDK 10.0](https://dotnet.microsoft.com/download) 或更新版本。已在
-  SDK 10.0.400 上验证过。只有负责构建的那台电脑需要它：构建出来的东西自己带着一份
-  .NET，可以在完全没有 .NET 的电脑上运行。
-- 不需要管理员权限。构建时和运行时都不会要。
+有些游戏会依次运行好几个可执行文件，只有其中一个才是对的。Valorant 从 `VALORANT.exe` 接着启动 `VALORANT-Win64-Shipping.exe`：只保护 `VALORANT-Win64-Shipping.exe`。
 
----
+- **两个都保护**：两个条目就是两个独立的冷却，等完第一个还要再等一次。
+- **只保护启动器**：结束进程只会结束那一个，不会结束它的子进程，所以游戏照样运行。
 
-## 获取与构建
+**每款游戏一个条目，而且要是真正拥有这一局的那个可执行文件。**
 
-```bash
-git clone https://github.com/ctyson0606/GameBrake.git
-cd GameBrake
+## 💾 设置
 
-dotnet restore
-dotnet build -c Release
-```
-
-产生的可执行文件在：
-
-```
-src/GameBrake.Tray/bin/Release/net10.0-windows/GameBrake.Tray.exe
-```
-
-想先跑跑看、不安装任何东西：
-
-```bash
-dotnet run --project src/GameBrake.Tray
-```
-
-通知区域会出现一个图标，在上面点右键就是菜单。
-
----
-
-## 安装一份自己的
-
-构建输出是你 clone 目录里一整包零散的文件，任何重新构建或清理都会动到你每天在用的
-那一份。把它打包成一个属于它自己的文件：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/pack.ps1
-```
-
-这会产生 `dist/GameBrake.Tray.exe`，一个约 49 MB 的独立可执行文件，自己带着一份
-.NET。跑它的那台电脑什么都不用装 —— 不用 SDK，也不用运行时。放到你要的位置再启动：
-
-```powershell
-$target = "$env:LOCALAPPDATA/Programs/GameBrake"
-
-New-Item -ItemType Directory -Force $target
-Copy-Item "dist/GameBrake.Tray.exe" $target -Force
-
-Start-Process "$target/GameBrake.Tray.exe"
-```
-
-接着在托盘图标上点右键，勾选 **Start with Windows**。这会把一个绝对路径写进
-`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，值名称是 `GameBrake`，所以随着
-登录启动的是那份「已安装」的副本，而不是构建输出。
-
-> **第一次启动会跳 SmartScreen 警告。**「Windows 已保护你的电脑」，真正的按钮藏在
-> **详细信息** → **仍要运行** 后面。这个可执行文件没有代码签名，而签名证书是唯一能
-> 让它消失的东西。这个警告跟这个工具本身无关：任何没签名、又还没几个人下载过的可执
-> 行文件都会跳。
-
-> **更新。** 你构建出来的改动，要重复做一次上面两个步骤，才会真的进到日常使用。先从
-> 菜单退出工具，否则文件会被占用。
-
-卸载的方式：从菜单退出，取消勾选 **Start with Windows**（或直接删掉那个 `Run` 值），
-然后删除 `%LOCALAPPDATA%\Programs\GameBrake` 和 `%APPDATA%\GameBrake`。
-
----
-
-## 选择要刹什么
-
-最省事的方式是用托盘菜单：**Protect an application…**，然后挑一个 `.exe`。
-
-它背后的文件是 `%APPDATA%\GameBrake\config.json`，这个文件属于你，可以手动编辑。你一
-保存，工具就会重新加载。
+`%APPDATA%\GameBrake\config.json` 可以自己改；保存后 GameBrake 会重新加载。
 
 ```json
 {
@@ -145,103 +123,88 @@ Start-Process "$target/GameBrake.Tray.exe"
 }
 ```
 
-| 键 | 含义 |
+| 项目 | 值 |
 | --- | --- |
-| `cooldownSeconds` | 被拦下之后要等多久。是一个全局值，不是每个程序各自一个。 |
-| `graceWindowSeconds` | 冷却结束后，那份许可持续多久。 |
-| `autostart` | 对应 **Start with Windows** 的勾选状态。 |
-| `protected[].id` | 任何 UUID。状态是以它为键，所以程序搬家后可以改路径，而不会把欠着的冷却一笔勾销。 |
-| `protected[].executable` | **完整路径**，比对时不分大小写。JSON 里反斜杠要写成 `\\`。 |
-| `protected[].displayName` | 菜单和通知里显示的名称。 |
-| `protected[].enabled` | `false` 等同于这条根本不存在。 |
+| `cooldownSeconds` | 启动被拦之后要等多久；所有条目共用一个值 |
+| `graceWindowSeconds` | 冷却结束后许可维持多久 |
+| `autostart` | 对应 **Start with Windows** 的勾选 |
+| `protected[].id` | 任意 UUID；状态以它为键，所以可执行文件搬家后可以改指向，不会把冷却清掉 |
+| `protected[].executable` | 完整路径，匹配不分大小写；反斜杠要写成 `\\` |
+| `protected[].displayName` | 菜单和通知里显示的名称 |
+| `protected[].enabled` | `false` 等同于这个条目不存在 |
+| 文件格式错误 | 会弹出对话框说明，修好之前什么都不保护 |
+| `%APPDATA%\GameBrake\state.json` | 工具自己的文件：重启后仍有效的期限 |
 
-最外层就这四个键，没有别的。如果文件坏掉，GameBrake 会弹一个对话框说明，并且在你修好
-之前**什么都不保护**——它不会偷偷退回默认值，也不会把坏掉的文件读成「没有欠任何冷
-却」。
+## 🛠️ 开发与测试
 
-工具还会写 `%APPDATA%\GameBrake\state.json`。那个文件属于工具，里面放的是那些会撑过重
-启的截止时间。
+还原、构建、运行：
 
-### 保护游戏本体，不要保护启动器
-
-启动器和游戏是两个不同的可执行文件，要刹哪一个由你决定。刹游戏本体。
-
-很多启动器（例如 Riot Client）会把自己写进 `Run` 键，从登录起就常驻，所以根本没有一次
-「启动」可以拦——按下 *Play* 只是唤醒既有的进程，不是开一个新的。保护启动器的结果，
-只是把它的辅助进程杀掉，而游戏照跑不误。
-
-有些游戏会跑一串可执行文件，而那一串里面只有一环是该抓的。Valorant 是 `VALORANT.exe`
-带起 `VALORANT-Win64-Shipping.exe`：请只保护 `VALORANT-Win64-Shipping.exe`，其他都不
-要。两个一起保护试过了，会在你已经等完第一次冷却之后，再被罚第二次。只保护
-`VALORANT.exe` 则完全拦不住游戏。
-
-这两件事都是工具的运作方式直接推得出来的，所以任何这样分成好几个可执行文件的游戏都会
-如此。两条项目就是两份各自独立的冷却——它们看起来像「只等一次」，只发生在两个进程刚好
-处于同一个阶段的时候，而只要其中一个结束、另一个还在跑，就不再是同一个阶段了。另外，
-终止只会结束那一个进程，不会结束它的子进程，所以把一串里的第一环关掉，游戏本身根本没
-被碰到。**一个游戏一条项目，而且要挑那个真正撑着这一场的可执行文件。**
-
-所以，如果一个被保护的游戏照样启动了，或是让你等了两次，先去换那一串里的另一个可执行
-文件，再下「工具坏了」的结论。托盘菜单会列出每一条被保护的条目和它现在的阶段，那是看
-出「到底是哪一个被罚」最快的方法。
-
----
-
-## 开发
-
-```bash
-# 构建
+```powershell
+dotnet restore
 dotnet build
-# 50 个测试
+dotnet run --project src/GameBrake.Tray
+```
+
+测试，接着是端到端检查：
+
+```powershell
 dotnet test
-# 15 项端到端检查
 powershell -ExecutionPolicy Bypass -File scripts/e2e.ps1
 ```
 
-跑之前有三件事要知道：
+安装用的单个文件：
 
-1. **跑 `dotnet test` 之前先退出托盘程序。** 正在运行的那一份会比测试里的监视器更快把
-   测试对象杀掉，失败看起来就会像是监视器从来没起过作用。
-2. **`dotnet test` 会真的开关 `charmap.exe` 窗口**，因此多花大约八秒。这是「拦截真的被
-   测过」而不是「假设它会动」的代价。
-3. **`scripts/e2e.ps1` 会覆写真正的 `%APPDATA%\GameBrake`**，因为那正是它要测的工具会去
-   读的位置。里面有真的东西请先复制一份出来。
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/pack.ps1
+```
 
-没有独立的类型检查步骤——C# 在构建时就会做类型检查——也还没有配置任何 linter。
+- **运行 `dotnet test` 之前先退出托盘程序**：运行中的那份会在 watcher 看到之前就把测试对象关掉，失败看起来就像 watcher 坏了。
+- **`dotnet test` 会打开和关闭真正的 `charmap.exe` 窗口**，这样拦截才是被测试过的，而不是假设的。
+- **`scripts/e2e.ps1` 会覆盖真正的 `%APPDATA%\GameBrake`**，因为工具就是在那里读设置；有真实数据要先备份。
 
-### 项目结构
+C# 在构建时就会做类型检查，目前没有配置 linter。
 
-| 项目 | 里面是什么 |
+## 📦 项目结构
+
+```text
+src/GameBrake.Core/
+src/GameBrake.Windows/
+src/GameBrake.Tray/
+tests/
+scripts/pack.ps1
+scripts/e2e.ps1
+GameBrake.slnx
+```
+
+- `src/GameBrake.Core/`：reducer——整个冷却规则写成一个纯函数——以及两个文件 store；目标是单纯的 `net10.0`，所以调用 Windows API 会直接编译失败；
+- `src/GameBrake.Windows/`：WMI 进程监视器、结束进程的组件，以及把它们接到 reducer 的 engine；
+- `src/GameBrake.Tray/`：托盘图标、菜单、画出来的倒数和开机自启，本身不含任何规则；
+- `tests/`：测试，大部分既不碰 Windows 也不碰真实进程；
+- `scripts/pack.ps1`：生成 `dist/` 里的单个自包含文件；
+- `scripts/e2e.ps1`：对着真正的托盘程序运行的端到端检查；
+- `GameBrake.slnx`：解决方案文件。
+
+`METHOD.md`、`STATE.md` 和 `GOTCHAS.md` 记录了这些决定背后的理由，包括实测后发现和预期不同的那些。
+
+## ⚠️ 兼容性与限制
+
+- **GameBrake 启动时已经在运行的程序，这一局不会被管**；登录时自己启动的程序会抢先一步，直到重启。已经欠下的冷却在重启后仍然有效。
+- **不支持 Microsoft Store 和 Game Pass 的程序**：它们的路径带着版本号，每次更新都会变。
+- **不会打断已经开始的一局**，也不限制总游玩时间；它只对每一局的开始收费。
+- **不防篡改**：`config.json` 和可执行文件对任何以你身份运行的程序都是可写的。同样的权限本来就能关掉它。
+- **只支持可执行文件**：不拦网站或网址。
+
+## ❓ 常见问题
+
+| 症状 | 怎么做 |
 | --- | --- |
-| `src/GameBrake.Core` | reducer——整套冷却策略，写成一个纯函数——以及两个文件存储。目标框架是纯 `net10.0`，所以想伸手去碰 Windows API 会直接编译失败，而不是靠人自己记得别碰。 |
-| `src/GameBrake.Windows` | WMI 进程监视器、终止器，以及把它们接到 reducer 上的引擎。 |
-| `src/GameBrake.Tray` | 托盘图标、菜单、画出来的倒数，以及开机自启。本身不持有任何策略。 |
-| `tests/` | 50 个测试，其中 29 个既不碰 Windows 也不碰真实进程。 |
+| 受保护的游戏还是开起来了 | 改为保护它启动链里的另一个可执行文件：真正拥有这一局的那个 |
+| 要等两次 | 同一款游戏两个条目就是两个冷却；只留一个 |
+| 第一次启动出现 **Windows 已保护你的电脑** | 文件没有签名；**更多信息** → **仍要运行** |
+| 对话框说 `config.json` 格式错误 | 修好 JSON；修好之前什么都不保护 |
+| `dotnet test` 的 watcher 测试失败 | 先退出托盘程序 |
+| 运行完 `scripts/e2e.ps1` 后设置变了 | 它会覆盖 `%APPDATA%\GameBrake`；把之前备份的放回去 |
 
----
+## 📄 许可证
 
-## 已知限制
-
-- **GameBrake 启动时已经在跑的东西，这一轮都不会被动到。** 会自己在登录时启动的程序会
-  赢过托盘的竞争，然后在你重启之前一直是豁免的。已经欠着的冷却仍然会撑过重启，所以这
-  不是逃掉冷却的路——但它是「一场全新的、免费的」开场的路。
-- **Microsoft Store 和 Game Pass 的应用不在范围内。** 它们的路径带着一段会随每次更新改
-  变的版本号，完整路径比对撑不过那个。
-- **它不会打断已经开始的一场**，也不管你总共玩多久。它课的是每一次「开场」的税。
-- **它不防篡改。** `config.json` 和可执行文件本身，任何以你身份运行的东西都能写，而工
-  具也可以从任务管理器关掉。这是交易条件，不是另一个漏洞：同样的访问权限，本来就已经
-  足以关掉它。
-- **不处理网站或网址。** 只处理可执行文件。
-
----
-
-## 设计笔记
-
-这个 repository 里的 `METHOD.md`、`STATE.md` 和 `GOTCHAS.md` 记着上面这些决定背后的理
-由——包括那些实际量过之后，结果和预期不一样的。动任何东西之前值得先读。
-
----
-
-## 许可
-
-MIT。见 [LICENSE](LICENSE)。
+MIT，见 [LICENSE](LICENSE)。
