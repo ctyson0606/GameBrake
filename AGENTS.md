@@ -67,6 +67,8 @@ diagnosis — Chasing a failure to its cause: reproduction, rates, confounds,
   and what a measurement means before it is attributed to anything.
 memory-update — When memory is written, by whom, and what an update has to
   re-read before it writes.
+readme — Writing or rewriting the README, or a change that makes it false: its
+  shape, its three editions, and the two sections scripts/check.sh checks.
 
 ## Entry points
 

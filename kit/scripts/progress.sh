@@ -845,7 +845,7 @@ html[data-lang="zh"] .en { display:none; }
 .lead .leadtext { margin:.15rem 0 .2rem; font-size:1.02rem; font-weight:600; line-height:1.55; }
 .leadfull > .u { margin:.15rem 0 .65rem; line-height:1.6; }
 .gnote { color:var(--muted); font-size:.88rem; margin:-.35rem 0 .7rem; }
-.glist { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.9rem 1.2rem; box-shadow:var(--shadow); margin:0 0 1.6rem; }
+.glist { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.9rem 1.2rem; box-shadow:var(--shadow); margin:1.4rem 0 1.6rem; }
 .glist h3 { margin:0 0 .5rem; font-size:1rem; }
 .glist ul { list-style:none; margin:0; padding:0; }
 .glist li { display:flex; gap:.7rem; align-items:baseline; padding:.4rem 0; border-top:1px solid var(--line); }

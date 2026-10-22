@@ -237,6 +237,8 @@ else pass "gitattributes behaves correctly in a clean repo"; fi
 
 # --- README translations agree ---------------------------------------------
 check_readme_translations "$ROOT"
+check_readme_layout "$ROOT"
+check_readme_commands "$ROOT"
 
 echo
 if [ "$FAILED" -eq 0 ]; then echo "check.sh: all checks passed"; else echo "check.sh: FAILED"; fi

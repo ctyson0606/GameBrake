@@ -72,6 +72,51 @@ check_readme_translations() {
   else pass "README translations agree (${#readmes[@]} files)"; fi
 }
 
+# The two README sections kit/skills/readme.md says restate the repository,
+# each held to what it restates. Only README.md is read: the translation check
+# above already holds every edition's fences to it.
+#
+# Every path in a fence under the "## 📦" layout heading exists in <dir>.
+#   check_readme_layout <dir>
+check_readme_layout() {
+  local dir="$1" p missing="" n=0
+  [ -f "$dir/README.md" ] || { na "README layout: no README.md"; return; }
+  while IFS= read -r p; do
+    n=$((n + 1))
+    [ -e "$dir/$p" ] || missing="$missing $p"
+  done < <(_readme_fenced "$dir/README.md" "## 📦" | sed 's/[[:space:]]#.*$//' | awk 'NF { print $1 }')
+  if [ "$n" -eq 0 ]; then na "README layout: no fenced paths under a \"## 📦\" heading"
+  elif [ -n "$missing" ]; then fail "README layout names paths that do not exist:$missing"
+  else pass "README layout: all $n paths exist"; fi
+}
+
+# Every command in a fence under the "## 🛠" development heading is one of the
+# Environment facts in <dir>/AGENTS.md, character for character.
+#   check_readme_commands <dir>
+check_readme_commands() {
+  local dir="$1" facts c bad="" n=0
+  [ -f "$dir/README.md" ] || { na "README commands: no README.md"; return; }
+  facts="$(awk '/^## Environment facts/ { p = 1; next } /^## / { p = 0 }
+    p && /^[A-Za-z0-9_-]+:/ { sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t]+#.*$/, ""); sub(/[ \t]+$/, ""); if ($0 != "" && $0 != "none") print }' \
+    "$dir/AGENTS.md" 2>/dev/null)"
+  if [ -z "$facts" ]; then na "README commands: AGENTS.md has no Environment facts to compare with"; return; fi
+  while IFS= read -r c; do
+    n=$((n + 1))
+    printf '%s\n' "$facts" | grep -qxF -- "$c" || bad="$bad; $c"
+  done < <(_readme_fenced "$dir/README.md" "## 🛠" | grep -vE '^[[:space:]]*(#|$)' | sed 's/[[:space:]]*$//')
+  if [ "$n" -eq 0 ]; then na "README commands: no fenced commands under a \"## 🛠\" heading"
+  elif [ -n "$bad" ]; then fail "README development commands not in AGENTS.md Environment facts${bad}"
+  else pass "README development commands match Environment facts ($n)"; fi
+}
+
+# The lines inside fences, in sections whose heading starts with <prefix>.
+_readme_fenced() {
+  awk -v pre="$2" '
+    /^## / { sec = (index($0, pre) == 1); f = 0; next }
+    /^```/ { f = !f; next }
+    sec && f' "$1" | sed 's/\r$//'
+}
+
 _readme_structure() {
   printf '%s %s %s' \
     "$(grep -c '^#\{1,6\} ' "$1")" \
