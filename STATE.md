@@ -1,6 +1,6 @@
 # STATE
 
-> Last updated: 2026-10-04
+> Last updated: 2026-10-22
 
 Current working state. Superseded content is deleted, not archived.
 For durable rules see METHOD.md.
@@ -78,10 +78,13 @@ gave the spec a file of its own.
 
 SparkForge kit 0.6.0 and its progress page were installed on 2026-10-04:
 kit/, the two progress stubs, TRANSLATION: zh-TW, and empty Milestones and
-Components headings in SPEC.md. translations/zh-TW.md does not exist yet, so the
-page shows English. A draft adding milestones, components, goal tags and Means
-and Try lines to SPEC.md awaits the user's approval and is not applied; SPEC.md
-changes only through the spec gate. Until it is applied the page lists those
+Components headings in SPEC.md; kit/ is on 0.6.3 since 2026-10-22.
+translations/zh-TW.md was first filled on 2026-10-21; kit 0.6.3 made commit
+bodies translation units too, so `scripts/progress.sh --untranslated` lists
+those again. A draft adding milestones, components, goal tags and Means and
+Try lines to SPEC.md was shown to the user on 2026-10-04 but never saved, so
+it has to be drafted again before anyone can approve it; SPEC.md changes
+only through the spec gate. Until it is applied the page lists those
 sections as gaps. G3 and G5 have no acceptance criterion, which the page also lists
 and the draft leaves open for the user to decide. The ten status lines under Acceptance status come from commands
 run on that date.
@@ -397,17 +400,6 @@ suite.
 
 ## Upstream
 
-- update-kit.sh copied kit/scripts/progress.sh in as mode 100644, although the
-  upstream index holds it as 100755, so check.sh failed on "shell scripts not
-  executable in the index" straight after an update to 0.6.0. Fixed here with
-  `git update-index --chmod=+x kit/scripts/progress.sh`. Any new .sh arriving in
-  kit/ will do the same.
-- The 0.6.0 install needed hand edits update-kit.sh does not make, and nothing
-  lists them: the scripts/progress.sh and progress.ps1 stubs, the TRANSLATION
-  declaration, the translations/ exception to the English rule and the progress
-  paragraph in AGENTS.md, an Acceptance status heading in STATE.md, and
-  Milestones and Components headings in SPEC.md. Found by diffing AGENTS.md
-  against template/AGENTS.md; check.sh reported none of them missing.
 - The progress page counts a status line as evidenced only with a command in
   inline code. scripts/e2e.ps1 could not be that command here, see Known
   Annoyances, so AC1 to AC8 are evidenced or claimed from `dotnet test` alone.

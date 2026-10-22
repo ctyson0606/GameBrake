@@ -25,24 +25,30 @@ na()   { echo "n/a   $1"; }
 # Checks shared with SparkForge's own repository checker.
 . "$(dirname "$0")/rule-checks.sh"
 
-# --- required files -------------------------------------------------------
-REQUIRED=(
-  AGENTS.md SPEC.md METHOD.md STATE.md GOTCHAS.md
-  .gitattributes kit/VERSION kit/entry-points.txt
-  scripts/check.sh scripts/update-kit.sh
-  kit/scripts/check.sh kit/scripts/update-kit.sh kit/scripts/rule-checks.sh
-  scripts/progress.sh scripts/progress.ps1
-  kit/scripts/progress.sh kit/scripts/progress.ps1
-)
-# CLAUDE.md is deliberately not in this list. It is one tool's entry file among
+# --- what the project must hold, from kit/project-requirements.txt --------
+# The list is one file so that check.sh and update-kit.sh read the same thing.
+# Each line is path|text|hint (see the header of that file). An unmet one is
+# reported with its hint, which says what to add and where to copy it from.
+#
+# CLAUDE.md is deliberately not in the list. It is one tool's entry file among
 # several, and a project using none of the tools that need one may delete it.
 # The entry-point check below is what governs those files.
-missing=""
-for f in "${REQUIRED[@]}"; do
-  [ -f "$ROOT/$f" ] || missing="$missing $f"
-done
-if [ -n "$missing" ]; then fail "required files missing:$missing"
-else pass "required files present"; fi
+REQS="$ROOT/kit/project-requirements.txt"
+if [ ! -f "$REQS" ]; then
+  fail "requirements: kit/project-requirements.txt is missing, so what the project needs cannot be checked; run scripts/update-kit.sh"
+else
+  unmet=0
+  while IFS='|' read -r rpath rtext rhint; do
+    case "$rpath" in ''|\#*) continue ;; esac
+    rhint="${rhint%$'\r'}"
+    if [ ! -f "$ROOT/$rpath" ]; then
+      fail "requirement: $rpath is missing. $rhint"; unmet=1
+    elif [ -n "$rtext" ] && ! grep -qF -- "$rtext" "$ROOT/$rpath"; then
+      fail "requirement: $rpath does not contain \"$rtext\". $rhint"; unmet=1
+    fi
+  done < "$REQS"
+  [ "$unmet" -eq 0 ] && pass "every requirement in kit/project-requirements.txt is met"
+fi
 
 # --- scripts/ holds stubs that hand over to kit/scripts/ ------------------
 # The scripts live in kit/ so that update-kit.sh carries their fixes with

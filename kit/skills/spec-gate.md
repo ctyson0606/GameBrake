@@ -40,6 +40,10 @@ be repeated: together the Try lines are the project's usage guide. Whether a
 milestone is planned, in progress or done is worked out from the evidence and
 never written. A component is one line: its path (a file or directory, relative
 to the project root) and, optionally, the components it uses.
+`uses` takes bare component ids separated by commas, such as `uses C2, C3`, and
+nothing else: words around them are not read as ids and are listed as a gap, so
+whatever needs saying about how a component uses another belongs in its
+responsibility.
 A goal with no milestone, a criterion with no goal, Means or Try, and a path that
 is not on disk are listed as gaps.
 

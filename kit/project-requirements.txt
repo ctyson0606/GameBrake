@@ -1,0 +1,42 @@
+# What a project must hold for the kit to work, one requirement per line:
+#
+#     path|text|hint
+#
+# path   a file, relative to the project root. It must exist.
+# text   optional. A fixed string (not a pattern) the file must contain. Leave
+#        it empty, as in "path||hint", to require only that the file exists.
+# hint   what to add and where to copy it from. "upstream" is SparkForge's
+#        template/ directory; its files sit at the same paths as here.
+#
+# Three fields, split on "|", so neither the path nor the text may contain a
+# pipe. Blank lines and lines starting with # are ignored.
+#
+# This is the one list. scripts/check.sh fails each requirement the project
+# does not meet, and scripts/update-kit.sh compares the list it replaced with
+# the new one and names the requirements that are new and unmet, because it is
+# the only place both lists are in hand. Everything here is required: a file a
+# project may delete to opt out of a tool belongs in entry-points.txt instead.
+
+AGENTS.md||copy upstream template/AGENTS.md
+SPEC.md||copy upstream template/SPEC.md
+METHOD.md||copy upstream template/METHOD.md
+STATE.md||copy upstream template/STATE.md
+GOTCHAS.md||copy upstream template/GOTCHAS.md
+.gitattributes||copy upstream template/.gitattributes
+kit/VERSION||comes with kit/; run scripts/update-kit.sh
+kit/entry-points.txt||comes with kit/; run scripts/update-kit.sh
+kit/scripts/check.sh||comes with kit/; run scripts/update-kit.sh
+kit/scripts/update-kit.sh||comes with kit/; run scripts/update-kit.sh
+kit/scripts/rule-checks.sh||comes with kit/; run scripts/update-kit.sh
+kit/scripts/progress.sh||comes with kit/; run scripts/update-kit.sh
+kit/scripts/progress.ps1||comes with kit/; run scripts/update-kit.sh
+scripts/check.sh||copy upstream template/scripts/check.sh (a one-line stub; stage it with git add --chmod=+x)
+scripts/update-kit.sh||copy upstream template/scripts/update-kit.sh (a one-line stub; stage it with git add --chmod=+x)
+scripts/progress.sh||copy upstream template/scripts/progress.sh (a one-line stub; stage it with git add --chmod=+x)
+scripts/progress.ps1||copy upstream template/scripts/progress.ps1 (a one-line stub)
+AGENTS.md|TRANSLATION:|add the line "TRANSLATION:" under Declarations in AGENTS.md, as in upstream template/AGENTS.md (blank = none)
+AGENTS.md|scripts/progress.sh|add the paragraph about scripts/progress.sh from upstream template/AGENTS.md to AGENTS.md
+STATE.md|## Acceptance status|add an "## Acceptance status" heading to STATE.md, as in upstream template/STATE.md
+SPEC.md|## Milestones|add a "## Milestones" heading to SPEC.md, as in upstream template/SPEC.md
+SPEC.md|## Components|add a "## Components" heading to SPEC.md, as in upstream template/SPEC.md
+AGENTS.md|Asked to open the page while TRANSLATION|replace the paragraph about scripts/progress.sh in AGENTS.md with the one in upstream template/AGENTS.md

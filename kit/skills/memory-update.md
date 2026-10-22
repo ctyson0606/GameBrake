@@ -43,7 +43,7 @@ On each write:
 4. Stamp `Last updated` in STATE.md.
 5. Say in one line what changed and where.
 
-Two writes the procedure does not otherwise name:
+One write the procedure does not otherwise name:
 
 - When an acceptance criterion in SPEC.md is verified or claimed done, write
   its line under Acceptance status in STATE.md, replacing the one before:
@@ -53,10 +53,10 @@ Two writes the procedure does not otherwise name:
   shown as `claimed` by the progress page, and a criterion with no line is shown
   as not started. The page checks nothing; it shows the evidence so a person
   can rerun it.
-- When TRANSLATION is set in AGENTS.md, run `scripts/progress.sh --untranslated`
-  after a write and fill or prune translations/<lang>.md as it reports: an
-  entry is a `## <hash>` heading and the translated unit under it. The memory
-  files themselves stay English.
+
+translations/<lang>.md is not written as you go. It is filled when the
+progress page is asked for, as AGENTS.md says: a write that waited for nobody
+to ask for it was never made.
 
 <!-- source: METHOD.md 26-38 -->
 

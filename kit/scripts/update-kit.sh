@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Pull the latest framework content from upstream and overwrite kit/ with it.
 #
-# Nothing outside kit/ is written. SPEC.md, METHOD.md, STATE.md, GOTCHAS.md
-# and every section of AGENTS.md — Declarations and Environment facts
+# Nothing outside kit/ is written, apart from the git index entries of the .sh
+# files under kit/, which are staged executable (see below). SPEC.md, METHOD.md,
+# STATE.md, GOTCHAS.md and every section of AGENTS.md — Declarations and Environment facts
 # included — are this project's own and are never touched by this script.
 #
 # For a project that consumes this framework the upstream is SparkForge
@@ -76,6 +77,18 @@ else
   : > "$OLD_LIST"
 fi
 
+# The same goes for kit/project-requirements.txt: what the project must hold
+# outside kit/. Only here are the old and new lists both in hand, so only here
+# can a requirement this update introduced be told from one the project has
+# always had to meet. An old kit with no such file is an empty list, which makes
+# every unmet requirement new.
+OLD_REQS="$tmp/old-project-requirements.txt"
+if [ -f "$ROOT/kit/project-requirements.txt" ]; then
+  cp "$ROOT/kit/project-requirements.txt" "$OLD_REQS"
+else
+  : > "$OLD_REQS"
+fi
+
 rm -rf "$ROOT/kit"
 cp -R "$SRC" "$ROOT/kit"
 
@@ -102,8 +115,52 @@ if [ -n "$arrived" ]; then
   echo "how a project opts out, which is also why check.sh cannot raise this."
 fi
 
+# Git for Windows has core.filemode false, so a .sh copied in above enters the
+# index as 100644 and check.sh then fails on it. The bit is real on macOS and
+# Linux and staging it there is still right. Only files under kit/ are touched.
+if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  shs="$(cd "$ROOT" && find kit -name '*.sh' | sort)"
+  if [ -n "$shs" ]; then
+    # shellcheck disable=SC2086
+    if (cd "$ROOT" && git add --chmod=+x -- $shs); then
+      echo "Staged the .sh files under kit/ as executable (git add --chmod=+x)."
+    else
+      echo "warning: could not stage kit/'s .sh files as executable; check.sh will say which are not." >&2
+    fi
+  fi
+fi
+
+needed=""
+if [ -f "$ROOT/kit/project-requirements.txt" ]; then
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    case "$line" in ''|\#*) continue ;; esac
+    grep -qxF -- "$line" "$OLD_REQS" 2>/dev/null && continue
+    # An old list may carry CR; compare without it.
+    tr -d '\r' < "$OLD_REQS" | grep -qxF -- "$line" && continue
+    rpath="${line%%|*}"; rest="${line#*|}"; rtext="${rest%%|*}"; rhint="${rest#*|}"
+    if [ ! -f "$ROOT/$rpath" ]; then
+      needed="$needed$rpath|$rhint
+"
+    elif [ -n "$rtext" ] && ! grep -qF -- "$rtext" "$ROOT/$rpath"; then
+      needed="$needed$rpath (needs \"$rtext\")|$rhint
+"
+    fi
+  done < "$ROOT/kit/project-requirements.txt"
+fi
+
+if [ -n "$needed" ]; then
+  echo
+  echo "This update needs by hand, because it only writes kit/:"
+  printf '%s' "$needed" | while IFS='|' read -r what hint; do
+    echo "    $what"
+    echo "        $hint"
+  done
+fi
+
 echo
-echo "Nothing outside kit/ was written. The scripts live in kit/scripts/ and"
+echo "Nothing outside kit/ was written except the index mode of kit/'s .sh files,"
+echo "which were staged executable. The scripts live in kit/scripts/ and"
 echo "came with it; scripts/ holds only the stubs that hand over to them."
 echo "Run scripts/check.sh: a skill added or removed upstream needs its stub"
 echo "adding or removing, and check.sh is what reports that."

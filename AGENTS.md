@@ -101,7 +101,10 @@ structure of the components. When a commit or a Next Steps entry serves an
 acceptance criterion, name its id (AC3): that puts it on that criterion's card
 and gives it a chip that jumps there. It stores nothing, so it cannot go stale.
 With TRANSLATION set, `scripts/progress.sh --untranslated` lists what lacks a
-translation in translations/<lang>.md.
+translation in translations/<lang>.md. Asked to open the page while TRANSLATION
+is set, first run it and write what it lists into that file, keeping every
+inline code span exactly as written, so the page opens translated. What is
+still missing the page offers to machine translate in the browser.
 Anything that belongs to SparkForge rather than to this project — a
 rule that proved wrong or useless here, a check that missed something,
 a stub or script that did not work, a framework rule this project was
