@@ -42,3 +42,4 @@ SPEC.md|## Components|add a "## Components" heading to SPEC.md, as in upstream t
 AGENTS.md|Asked to open the page while TRANSLATION|replace the paragraph about scripts/progress.sh in AGENTS.md with the one in upstream template/AGENTS.md
 AGENTS.md|readme — |add the readme line to the Skill routing block of AGENTS.md, as in upstream template/AGENTS.md
 .claude/skills/readme/SKILL.md||copy upstream template/.claude/skills/readme/SKILL.md (a stub)
+.gitattributes|kit/project-requirements.txt text eol=lf|add the line "kit/project-requirements.txt text eol=lf" to .gitattributes, as in upstream template/.gitattributes

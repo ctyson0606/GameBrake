@@ -39,8 +39,10 @@ if [ ! -f "$REQS" ]; then
 else
   unmet=0
   while IFS='|' read -r rpath rtext rhint; do
+    # A checkout with CRLF turns a blank line into a lone CR, which is not
+    # empty: strip it before deciding what the line is.
+    rpath="${rpath%$'\r'}"; rhint="${rhint%$'\r'}"
     case "$rpath" in ''|\#*) continue ;; esac
-    rhint="${rhint%$'\r'}"
     if [ ! -f "$ROOT/$rpath" ]; then
       fail "requirement: $rpath is missing. $rhint"; unmet=1
     elif [ -n "$rtext" ] && ! grep -qF -- "$rtext" "$ROOT/$rpath"; then
@@ -241,6 +243,7 @@ attr_bad="$( { expect_eol sample.sh lf
                expect_eol sample.mdc lf
                expect_eol VERSION   lf
                expect_eol kit/entry-points.txt lf
+               expect_eol kit/project-requirements.txt lf
                expect_eol .clinerules lf
                expect_eol .windsurfrules lf
                expect_eol sample.bat crlf

@@ -6,6 +6,7 @@
 *.mdc text eol=lf
 VERSION text eol=lf
 kit/entry-points.txt text eol=lf
+kit/project-requirements.txt text eol=lf
 # The tool entry files that carry no extension. They are read by tools, not by
 # a shell, but they are listed for the same reason VERSION is: an extensionless
 # file falls through every pattern above and would be left to text=auto.

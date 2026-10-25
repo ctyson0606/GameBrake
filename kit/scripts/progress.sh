@@ -1549,6 +1549,7 @@ cat <<'EOF'
       row.appendChild(el("code", "k", p[0]));
       if (!e.p) row.appendChild(biEl("span", "gapname", "not listed in `AGENTS.md`", "`AGENTS.md` 裡沒有這一項"));
       else if (e.v === "") row.appendChild(biEl("span", "gapname", "empty: not established yet", "空白：尚未確立"));
+      else if (/^none(\s|$)/.test(e.v)) row.appendChild(biEl("span", "gapname", "none: this project has no such command", "沒有：這個專案沒有這個指令"));
       else {
         row.appendChild(el("code", null, e.v));
         var b = el("button"); b.type = "button"; b.appendChild(bi("copy", "複製"));
