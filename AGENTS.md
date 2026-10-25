@@ -95,10 +95,12 @@ overwritten.
 scripts/check.sh verifies the invariants of this layout. Run it after
 any change to kit/, the stubs, or AGENTS.md itself.
 scripts/progress.sh (Windows: `powershell -ExecutionPolicy Bypass -File
-scripts/progress.ps1`) opens a page built from SPEC.md, STATE.md and git, in four
-tabs: progress (the goals and criteria of one milestone, each criterion a card
-that opens to what it means, how to try it and its evidence), a roadmap of the
-milestones, a features guide from the criteria that have evidence, and the
+scripts/progress.ps1`) opens a page built from SPEC.md, STATE.md, the README and
+git, for someone who knows nothing about the project: what it is, then each
+goal as a feature, done or not, with how each done one was done (the goal's
+How line), the parts it uses and the criteria that verify it; below, for
+developers, the work by date and the next steps. Further tabs hold a roadmap of
+the milestones, a usage guide from the criteria that have evidence, and the
 structure of the components. When a commit or a Next Steps entry serves an
 acceptance criterion, name its id (AC3): that puts it on that criterion's card
 and gives it a chip that jumps there. It stores nothing, so it cannot go stale.

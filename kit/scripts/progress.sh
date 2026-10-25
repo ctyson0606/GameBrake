@@ -272,12 +272,16 @@ function emit(   i) {
     print "li " norm(acText)
     for (i = 1; i <= nm; i++) print "means " norm(mt[i])
     for (i = 1; i <= nt; i++) print "try " norm(tt[i])
+    if (hw != "") print "how " norm(hw)
+    if (pt != "") print "parts " norm(pt)
   }
-  have = 0; acText = ""; nm = 0; nt = 0; tgt = ""
+  have = 0; acText = ""; nm = 0; nt = 0; tgt = ""; hw = ""; pt = ""
 }
 function addto(s) {
   if (tgt == "m") mt[nm] = mt[nm] " " s
   else if (tgt == "t") tt[nt] = tt[nt] " " s
+  else if (tgt == "h") hw = hw " " s
+  else if (tgt == "p") pt = pt " " s
   else if (tgt == "a") acText = acText " " s
 }
 { sub(/\r$/, "") }
@@ -297,6 +301,8 @@ line ~ /^[ \t]*([-*]|[0-9]+[.)])[ \t]+/ {
   if (!have || ind <= base) { emit(); have = 1; base = ind; acText = line; tgt = "a"; next }
   if (line ~ /^Means:/) { sub(/^Means:[ \t]*/, "", line); mt[++nm] = line; tgt = "m"; next }
   if (line ~ /^Try:/) { sub(/^Try:[ \t]*/, "", line); tt[++nt] = line; tgt = "t"; next }
+  if (line ~ /^How:/) { sub(/^How:[ \t]*/, "", line); hw = line; tgt = "h"; next }
+  if (line ~ /^Parts:/) { sub(/^Parts:[ \t]*/, "", line); pt = line; tgt = "p"; next }
   acText = acText " " line; tgt = "a"; next
 }
 { addto(norm(line)) }
@@ -316,7 +322,8 @@ resolve_section() {
   else awk -v sec="$2" "$UNITS_AWK" "$1"; fi | while read -r kind text; do
     [ "${3:-}" != "li" ] || [ "$kind" = "li" ] || continue
     h=""; tr=""; st="ok"
-    if [ "$TRANS_ON" -eq 1 ]; then
+    # A Parts line is component ids, never translated.
+    if [ "$TRANS_ON" -eq 1 ] && [ "$kind" != "parts" ]; then
       h="$(printf '%s' "$text" | git hash-object --stdin)"
       if [ -f "$T/tr/$h" ]; then
         tr="$(cat "$T/tr/$h")"
@@ -366,7 +373,10 @@ resolve_batch() {
 
 resolve_section "$SPEC"  "Problem"             > "$T/res.problem"
 resolve_section "$SPEC"  "Milestones"          li > "$T/res.ms"
-resolve_section "$SPEC"  "Goals"               li > "$T/res.goals"
+# Goals go through the criteria parser so that a goal can carry indented How:
+# and Parts: lines; res.goals.li holds the goals alone.
+resolve_section "$SPEC"  "Goals"               ac > "$T/res.goals"
+awk 'BEGIN { FS = "\037" } $1 == "li"' "$T/res.goals" > "$T/res.goals.li"
 resolve_section "$SPEC"  "Acceptance criteria" ac > "$T/res.ac"
 resolve_section "$STATE" "Current Focus"       > "$T/res.focus"
 resolve_section "$STATE" "Next Steps"          li > "$T/res.next"
@@ -675,6 +685,46 @@ commits_json() {
     END { printf "]" }' "$1"
 }
 
+# goal_extras_json: one entry per goal, in order: its How line as a unit, and the
+# component ids its Parts line names. Parts takes bare comma-separated ids, as
+# uses does; any other token is kept in bad and reported as a gap.
+goal_extras_json() {
+  awk "$JLIB"'
+    function unit() { return "{\"en\":" jesc($4) ",\"tr\":" jesc($5) ",\"st\":" jesc($2) "}" }
+    function flush(   n, p, i, t, ids, bad) {
+      if (!open) return
+      ids = ""; bad = ""
+      n = split(parts, p, ",")
+      for (i = 1; i <= n; i++) {
+        t = p[i]; gsub(/^[ \t]+|[ \t]+$/, "", t); if (t == "") continue
+        if (t ~ /^C[0-9]+$/) ids = ids (ids == "" ? "" : ",") jesc(t)
+        else bad = bad (bad == "" ? "" : " ") t
+      }
+      printf "%s{\"how\":%s,\"parts\":[%s],\"badParts\":%s}", (nn++ ? "," : ""), how, ids, jesc(bad)
+      open = 0
+    }
+    BEGIN { FS = "\037"; printf "[" }
+    $1 == "li" { flush(); open = 1; how = "null"; parts = ""; next }
+    $1 == "how" && open { how = unit(); next }
+    $1 == "parts" && open { parts = $4; next }
+    END { flush(); printf "]" }' "$1"
+}
+
+# tagline_json: the README hero's one-sentence description, which kit/skills/readme.md
+# puts in "<p><b>What it is</b>: what it does.</p>", from README.md and, with
+# TRANSLATION set, from README.<lang>.md. null when there is no such line.
+tagline_of() {
+  [ -f "$1" ] || return 0
+  grep -m 1 '<p><b>' "$1" | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/&amp;/\&/g' | tr -d '\r'
+}
+tagline_json() {
+  local en tr=""
+  en="$(tagline_of "$ROOT/README.md")"
+  [ -n "$en" ] || { printf 'null'; return; }
+  [ "$TRANS_ON" -eq 1 ] && tr="$(tagline_of "$ROOT/README.$LANG2.md")"
+  printf '{"en":%s,"tr":%s,"st":"ok"}' "$(json_str "$en")" "$(json_str "$tr")"
+}
+
 # tl_json: the timeline's commits, each with its body paragraphs as units.
 tl_json() {
   awk "$JLIB"'
@@ -800,6 +850,37 @@ html[data-lang="zh"] .en { display:none; }
 .cmd code { flex:1; min-width:0; padding:.3em .5em; }
 .cmd button { flex:none; padding:.1rem .6rem; font-size:.8rem; }
 .gapname { color:var(--warn); font-style:italic; flex:1; }
+.tagline { font-size:1.12rem; font-weight:700; line-height:1.55; margin:.1rem 0 .9rem; }
+.acline { color:var(--muted); font-size:.85rem; margin-top:.6rem; }
+.counts .t4 { color:var(--muted); }
+.fgroup { margin:1.8rem 0 0; }
+.fgh { font-size:1.15rem; margin:0 0 .7rem; }
+.feat { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; margin:0 0 .7rem; box-shadow:var(--shadow); }
+.feat.f-done { border-left-color:var(--ok); }
+.feat.f-partial { border-left-color:var(--mid); }
+.feat.f-none, .feat.f-nocrit { border-left-color:var(--none); }
+.fhead { display:flex; width:100%; gap:.7rem; align-items:baseline; text-align:left; background:none; border:0; border-radius:12px; padding:.8rem 1rem .5rem; font:inherit; color:inherit; cursor:pointer; }
+.fico { font-weight:700; width:1.2em; flex:none; }
+.f-done .fico { color:var(--ok); } .f-partial .fico { color:var(--mid); } .f-none .fico, .f-nocrit .fico { color:var(--none); }
+.ftext { flex:1; min-width:0; font-weight:600; line-height:1.5; }
+.fstate { flex:none; font-size:.82rem; color:var(--muted); white-space:nowrap; }
+.f-done .fstate { color:var(--ok); } .f-partial .fstate { color:var(--mid); }
+.fchev { flex:none; color:var(--muted); transition:transform .15s; }
+.feat.open .fchev { transform:rotate(90deg); }
+.fhow { padding:0 1rem .8rem 2.9rem; line-height:1.6; }
+.fhow.nohow { color:var(--muted); font-style:italic; font-size:.9rem; }
+.flab { display:block; font-size:.75rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin:0 0 .15rem; }
+.fbody { padding:0 1rem .9rem 2.9rem; }
+.frow { margin:.2rem 0 .8rem; }
+.facs, .fwork { list-style:none; margin:0; padding:0; }
+.facs li { display:flex; gap:.5rem; align-items:baseline; padding:.3rem .4rem; border-radius:8px; cursor:pointer; }
+.facs li:hover { background:var(--code); }
+.facs .ico { width:auto; height:auto; min-width:1.1em; flex:none; background:none; border:0; border-radius:0; font-size:1rem; display:inline; padding:0; } .facs .s-evidenced .ico { color:var(--ok); } .facs .s-claimed .ico { color:var(--mid); }
+.facs .atext { flex:1; min-width:0; } .facs .id { flex:none; font:600 .75rem ui-monospace, Consolas, Menlo, monospace; color:var(--muted); }
+.fwork li { padding:.2rem 0; }
+.pchip { font-family:inherit; }
+.devhead { margin:2.6rem 0 0; font-size:1rem; color:var(--muted); border-top:1px solid var(--line); padding-top:1.2rem; }
+.devhead + #lists { margin-top:1rem; }
 .big { font-size:2rem; font-weight:700; line-height:1.1; margin:.2rem 0 .1rem; }
 .bar3 { display:flex; height:14px; border-radius:7px; overflow:hidden; background:var(--nonebg); margin:.6rem 0; }
 .bar3 i { display:block; height:100%; }
@@ -1002,6 +1083,7 @@ cat <<'EOF'
 </div>
 <div id="highline" hidden></div>
 <div id="goals"></div>
+<h2 class="devhead"><span class="en">For developers: the work by date, and what comes next</span><span class="zh">給開發者：按日期的工作紀錄，以及接下來要做的</span></h2>
 <section id="lists"></section>
 </div>
 <div id="tab-roadmap" class="tabpanel" hidden></div>
@@ -1019,7 +1101,9 @@ printf '"orphans":%s,"trfile":%s,' "$ORPHANS" "$(json_str "translations/$LANG2.m
 printf '"problem":%s,' "$(units_json "$T/res.problem")"
 printf '"focus":%s,' "$(units_json "$T/res.focus")"
 printf '"ms":%s,' "$(idlist_json "$T/res.ms" "$MS_PAT" M '^$')"
-printf '"goals":%s,' "$(idlist_json "$T/res.goals" "$GOAL_PAT" G '^M[0-9][0-9]*$')"
+printf '"goals":%s,' "$(idlist_json "$T/res.goals.li" "$GOAL_PAT" G '^M[0-9][0-9]*$')"
+printf '"gx":%s,' "$(goal_extras_json "$T/res.goals")"
+printf '"tagline":%s,' "$(tagline_json)"
 printf '"comps":%s,' "$(comps_json)"
 printf '"ac":%s,' "$(acs_json)"
 printf '"next":%s,' "$(units_json "$T/res.next")"
@@ -1133,6 +1217,16 @@ cat <<'EOF'
   /* ---------- computed state: nothing here is written by hand ---------- */
   // A criterion counts as evidenced only when its status line records evidence.
   function effOf(a) { return a.decl === "evidenced" ? (a.ev ? "evidenced" : "claimed") : (a.decl === "claimed" ? "claimed" : "none"); }
+  // A goal is a feature, and its state is computed from its criteria, never
+  // written: done when every one has evidence, partly when some are evidenced
+  // or claimed, not started when none is, and unjudged when it has no criteria.
+  function featState(g) {
+    if (!g.acs.length) return "nocrit";
+    var ev = g.acs.filter(function (a) { return a.eff === "evidenced"; }).length;
+    if (ev === g.acs.length) return "done";
+    if (ev || g.acs.some(function (a) { return a.eff === "claimed"; })) return "partial";
+    return "none";
+  }
   // Tag goals with their milestones. m.goals gets the goals that name it and g.mids
   // the known milestones a goal names; references to unknown ones are returned.
   function linkMilestones(msList, goalList) {
@@ -1192,9 +1286,12 @@ cat <<'EOF'
     if (m.impl) gap("medium", "A milestone in `SPEC.md` has no id written; it is numbered " + bt(m.id) + " by position.", "`SPEC.md` 裡有一個里程碑沒有寫編號，依位置編為 " + bt(m.id) + "。");
   });
   var hasMs = msList.length > 0;
-  D.goals.forEach(function (g) {
+  D.goals.forEach(function (g, gi) {
     if (g.dup) { gap("high", bt(g.id) + " appears more than once under `Goals` in `SPEC.md`; only the first is shown.", bt(g.id) + " 在 `SPEC.md` 的 `Goals` 裡重複出現，只顯示第一個。"); return; }
     goalBy[g.id] = g; goals.push(g); g.acs = [];
+    var x = D.gx[gi] || {};
+    g.how = x.how || null; g.parts = x.parts || [];
+    if (x.badParts) gap("high", bt(g.id) + "'s `Parts:` line holds " + bt(x.badParts) + ", which is not a component id; it takes bare ids such as `C1, C2`.", bt(g.id) + " 的 `Parts:` 寫了 " + bt(x.badParts) + "，那不是元件編號；它只接受像 `C1, C2` 這樣的編號。", "g:" + g.id);
     if (g.impl) gap("medium", "A goal in `SPEC.md` has no id written; it is numbered " + bt(g.id) + " by position.", "`SPEC.md` 裡有一個目標沒有寫編號，依位置編為 " + bt(g.id) + "。", "g:" + g.id);
   });
   D.ac.acs.forEach(function (a) {
@@ -1254,6 +1351,12 @@ cat <<'EOF'
   group("medium", goals.filter(function (g) { return !g.acs.length; }).map(function (g) { return g.id; }), "g:",
     ["% has no acceptance criteria: no criterion names it.", "% 沒有驗收條件：沒有任何條件指名它。"],
     ["# goals have no acceptance criteria, because no criterion names them: %.", "# 個目標沒有驗收條件，因為沒有任何條件指名它們：%。"]);
+  group("medium", goals.filter(function (g) { return featState(g) === "done" && !g.how; }).map(function (g) { return g.id; }), "g:",
+    ["% is done but has no `How:` line saying how it was done.", "% 已完成，但沒有 `How:` 說明是怎麼做到的。"],
+    ["# done goals have no `How:` line saying how they were done: %.", "# 個已完成的目標沒有 `How:` 說明是怎麼做到的：%。"]);
+  goals.forEach(function (g) {
+    g.parts.forEach(function (p) { if (!compBy[p]) gap("high", bt(g.id) + "'s `Parts:` names " + bt(p) + ", which `SPEC.md` does not list under `Components`.", bt(g.id) + " 的 `Parts:` 指名的 " + bt(p) + " 不在 `SPEC.md` 的 `Components` 裡。", "g:" + g.id); });
+  });
   acs.forEach(function (a) {
     var r = "a:" + a.id;
     if (a.impl) gap("medium", "A criterion in `SPEC.md` has no id written; it is numbered " + bt(a.id) + " by position.", "`SPEC.md` 裡有一項驗收條件沒有寫編號，依位置編為 " + bt(a.id) + "。", r);
@@ -1300,6 +1403,7 @@ cat <<'EOF'
     D.changes.items.forEach(function (c) { count(subj(c)); });
     D.hist.forEach(function (c) { count(subj(c)); });
     D.tl.forEach(function (c) { count(subj(c)); c.body.forEach(count); });
+    goals.forEach(function (g) { if (g.how) count(g.how); });
   })();
   if (D.trans && trMiss) gap("low", trMiss + " of " + trTotal + " displayed units have no current translation; `scripts/progress.sh --untranslated` lists them.", trTotal + " 段中 " + trMiss + " 段沒有最新的翻譯；`scripts/progress.sh --untranslated` 會列出它們。");
   if (D.trans && D.orphans) gap("low", D.orphans + " translation(s) in " + bt(D.trfile) + " match no displayed unit; `scripts/progress.sh --untranslated` lists them to prune.", bt(D.trfile) + " 裡有 " + D.orphans + " 筆翻譯對不到任何顯示的單位；`scripts/progress.sh --untranslated` 會列出，請清掉。");
@@ -1486,6 +1590,9 @@ cat <<'EOF'
   }
   (function what() {
     var s = boxHead(document.getElementById("what"), "What this is", "這是什麼");
+    // The one sentence a stranger needs first: the README hero's description,
+    // in the edition the view shows.
+    if (D.tagline) { var tg = el("p", "tagline"); tg.appendChild(unitFrag(D.tagline)); s.appendChild(tg); }
     sub(s, "The problem", "要解決的問題", D.problem);
     if (!D.problem.length) { var e = el("p", "empty"); e.appendChild(bi("Not written: the spec gate has not run.", "還沒寫：規格門還沒跑過。")); s.appendChild(e); }
     else s.appendChild(leadBlock(D.problem));
@@ -1543,6 +1650,27 @@ cat <<'EOF'
       else { line.appendChild(el("span", "id", scope)); line.appendChild(document.createTextNode(" ")); line.appendChild(unitFrag(msBy[scope])); }
       s.appendChild(line);
     }
+    // With goals that criteria name, progress is counted in features; the
+    // criteria become one line under it.
+    var fl = scopeGoalsOf(scope);
+    if (fl.some(function (g) { return g.acs.length; })) {
+      var fc = { done: 0, partial: 0, none: 0, nocrit: 0 };
+      fl.forEach(function (g) { fc[featState(g)]++; });
+      var fbig = el("div", "big"); fbig.appendChild(bi(fc.done + " of " + fl.length + " features done", fl.length + " 項功能中 " + fc.done + " 項完成")); s.appendChild(fbig);
+      var fbar = el("div", "bar3");
+      [["k1", fc.done], ["k2", fc.partial]].forEach(function (p) { var i = el("i", p[0]); i.style.width = (100 * p[1] / fl.length) + "%"; fbar.appendChild(i); });
+      s.appendChild(fbar);
+      var flg = el("div", "counts");
+      [["t1", "✓ " + fc.done + " done", "✓ " + fc.done + " 項完成"], ["t2", "◐ " + fc.partial + " partly", "◐ " + fc.partial + " 項部分完成"],
+       ["t3", "○ " + fc.none + " not started", "○ " + fc.none + " 項未開始"], ["t4", "? " + fc.nocrit + " cannot be judged", "? " + fc.nocrit + " 項無法判斷"]].forEach(function (p) {
+        if (p[0] === "t4" && !fc.nocrit) return;
+        var sp = el("span", p[0]); sp.appendChild(bi(p[1], p[2])); flg.appendChild(sp);
+      });
+      s.appendChild(flg);
+      var al = scopeAcsOf(scope), aev = al.filter(function (a) { return a.eff === "evidenced"; }).length;
+      s.appendChild(biEl("div", "acline", "Acceptance criteria: " + aev + " of " + al.length + " evidenced", "驗收標準：" + al.length + " 項中 " + aev + " 項有證據"));
+      return;
+    }
     var list = scopeAcsOf(scope), total = list.length, counts = { evidenced: 0, claimed: 0, none: 0 };
     list.forEach(function (a) { counts[a.eff]++; });
     if (!total) { var e = el("p", "empty"); e.appendChild(bi("No acceptance criteria here yet.", "這裡還沒有驗收條件。")); s.appendChild(e); return; }
@@ -1563,6 +1691,9 @@ cat <<'EOF'
     if (tabName !== "progress") showTab("progress");
     if (!(cards[id] && cards[id].length)) setScope("all");
     var c = cards[id] && cards[id][0];
+    // A criterion inside a feature row is hidden until the row is opened.
+    var fb = c && c.closest ? c.closest(".fbody") : null;
+    if (fb && fb.hidden) { var fh = fb.parentNode.querySelector(".fhead"); if (fh) fh.click(); }
     if (c) { c.scrollIntoView({ block: "center" }); flash(c); }
     renderDetail(a); openDrawer(detail, c);
   }
@@ -1632,13 +1763,85 @@ cat <<'EOF'
       s1.insertBefore(biEl("p", "gnote", "These criteria do not say which goal they serve, so they are listed apart from the goals.", "這些驗收標準沒有註明屬於哪個目標，所以和目標分開列出。"), s1.children[1]);
       host.appendChild(s1);
     } else {
-      used.forEach(function (g) { host.appendChild(goalSection(g)); });
+      // Features: one row per goal, done ones first. A row says what the
+      // feature is and where it stands; a done one says how it was done
+      // without being opened, and opening any row shows the parts it uses, the
+      // criteria that verify it and the work that named them.
+      var FICON = { done: "✓", partial: "◐", none: "○", nocrit: "?" };
+      function featItem(g) {
+        var st = featState(g), it = el("div", "feat f-" + st); it.id = "sec-" + g.id;
+        var head = el("button", "fhead"); head.type = "button"; head.setAttribute("aria-expanded", "false");
+        head.appendChild(el("span", "fico", FICON[st]));
+        var ft = el("span", "ftext"); ft.appendChild(unitFrag(g)); head.appendChild(ft);
+        var left = g.acs.filter(function (a) { return a.eff !== "evidenced"; }).length;
+        var stx = st === "done" ? ["done", "完成"] : st === "nocrit" ? ["no criteria to judge by", "沒有驗收標準，無法判斷"]
+          : st === "none" ? ["not started", "還沒開始"] : [left + " of " + g.acs.length + " criteria still lack evidence", "還差 " + left + " / " + g.acs.length + " 項驗收"];
+        head.appendChild(biEl("span", "fstate", stx[0], stx[1]));
+        head.appendChild(el("span", "fchev", "▸"));
+        it.appendChild(head);
+        if (g.how) {
+          var hw = el("div", "fhow"); hw.appendChild(biEl("span", "flab", "How it was done", "怎麼做到的"));
+          hw.appendChild(unitDiv(g.how)); it.appendChild(hw);
+        } else if (st === "done") it.appendChild(biEl("div", "fhow nohow", "How it was done is not written yet: a `How:` line under this goal in `SPEC.md`.", "還沒寫怎麼做到的：在 `SPEC.md` 這個目標底下加一行 `How:`。"));
+        var body = el("div", "fbody"); body.hidden = true;
+        if (g.parts.length) {
+          var pr = el("div", "frow"); pr.appendChild(biEl("span", "flab", "Parts it uses", "用到的部分"));
+          var pc = el("div", "chips");
+          g.parts.forEach(function (id) {
+            var c = compBy[id];
+            var b = el("button", "chip pchip"); b.type = "button";
+            if (c && c.name) b.appendChild(unitFrag(c.name)); else b.appendChild(document.createTextNode(id + (c ? "" : "?")));
+            b.title = id;
+            if (c) b.addEventListener("click", function (e) { e.stopPropagation(); jumpComp(id); });
+            pc.appendChild(b);
+          });
+          pr.appendChild(pc); body.appendChild(pr);
+        }
+        var vr = el("div", "frow"); vr.appendChild(biEl("span", "flab", "How it is verified", "怎麼驗證的"));
+        if (!g.acs.length) vr.appendChild(biEl("p", "empty", "No acceptance criterion names this goal, so nothing says whether it works.", "沒有任何驗收標準指名這個目標，所以沒有東西能說明它是否可用。"));
+        else {
+          var ul = el("ul", "facs");
+          g.acs.forEach(function (a) {
+            var li = el("li", "s-" + a.eff); li.tabIndex = 0; li.setAttribute("role", "button");
+            li.appendChild(el("span", "ico", ICON[a.eff]));
+            var tt = el("span", "atext"); tt.appendChild(unitFrag(a.title)); li.appendChild(tt);
+            li.appendChild(el("span", "id", a.id));
+            function open(e) { e.stopPropagation(); renderDetail(a); openDrawer(detail, li); }
+            li.addEventListener("click", open);
+            li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); } });
+            (cards[a.id] = cards[a.id] || []).push(li);
+            ul.appendChild(li);
+          });
+          vr.appendChild(ul);
+        }
+        body.appendChild(vr);
+        var seen = {}, work = [];
+        g.acs.forEach(function (a) { a.commits.forEach(function (c) { if (!seen[c.h]) { seen[c.h] = 1; work.push(c); } }); });
+        work.sort(function (x, y) { return x.d < y.d ? 1 : x.d > y.d ? -1 : 0; });
+        if (work.length) {
+          var wr = el("div", "frow"); wr.appendChild(biEl("span", "flab", "Work on it", "相關工作"));
+          var wl = el("ul", "fwork");
+          work.slice(0, 4).forEach(function (c) { var li = el("li"); li.appendChild(el("span", "date", c.d)); li.appendChild(document.createTextNode(" ")); li.appendChild(revealFrag(subj(c))); wl.appendChild(li); });
+          wr.appendChild(wl); body.appendChild(wr);
+        }
+        it.appendChild(body);
+        head.addEventListener("click", function () { body.hidden = !body.hidden; it.classList.toggle("open", !body.hidden); head.setAttribute("aria-expanded", body.hidden ? "false" : "true"); refreshClamps(); });
+        return it;
+      }
+      function featGroup(list, en, zh) {
+        if (!list.length) return;
+        var sec = el("section", "fgroup");
+        var h = el("h2", "fgh"); h.appendChild(bi(en + " (" + list.length + ")", zh + "（" + list.length + "）")); sec.appendChild(h);
+        list.forEach(function (g) { sec.appendChild(featItem(g)); });
+        host.appendChild(sec);
+      }
+      featGroup(sg.filter(function (g) { return featState(g) === "done"; }), "Done", "已完成的功能");
+      featGroup(sg.filter(function (g) { return featState(g) !== "done"; }), "Not done yet", "還沒完成的功能");
       if (rest.length) {
         var s2 = section("sec-none", critHead(rest, "Other criteria", "其他驗收標準"), rest);
         s2.insertBefore(biEl("p", "gnote", "These name no goal, or one that is not listed.", "這些沒有註明目標，或註明的目標不存在。"), s2.children[1]);
         host.appendChild(s2);
       }
-      if (unused.length) host.appendChild(goalList(unused, "Goals no criterion covers yet", "還沒有驗收標準的目標"));
     }
     if (!sg.length && !rest.length) {
       var e = el("p", "empty");
@@ -1763,7 +1966,7 @@ cat <<'EOF'
         var body = el("div", "tlbody");
         c.body.forEach(function (u) { body.appendChild(unitDiv(u)); });
         var meta = el("div", "tlmeta"); meta.appendChild(el("code", null, c.h)); body.appendChild(meta);
-        li.appendChild(toggle("How it was done", "詳細過程", "Hide", "收起", body));
+        li.appendChild(toggle("Details", "詳細說明", "Hide", "收起", body));
         li.appendChild(body);
       }
       return li;
@@ -1877,7 +2080,7 @@ cat <<'EOF'
   /* ---------- the features tab: the usage guide, from what has evidence ---------- */
   function renderFeatures() {
     var host = document.getElementById("tab-features"); host.textContent = "";
-    tabHead(host, "Features", "功能", "What the project does and how to try each thing, taken from the criteria that have recorded evidence.", "專案做得到什麼、每一項怎麼親自試，取自已經記錄了證據的條件。");
+    tabHead(host, "How to use", "怎麼使用", "How to try each thing the project does, taken from the criteria that have recorded evidence.", "專案做得到的每一件事怎麼親自試，取自已經記錄了證據的條件。");
     var box = el("section", "box"); boxHead(box, "How to start", "怎麼啟動"); startRows(box); host.appendChild(box);
     var ev = acs.filter(function (a) { return a.eff === "evidenced"; });
     var cl = acs.filter(function (a) { return a.eff === "claimed"; }).length, ns = acs.filter(function (a) { return a.eff === "none"; }).length;
@@ -2044,7 +2247,7 @@ cat <<'EOF'
   }
 
   /* ---------- tabs: remembered, and reflected in the address so a link can open one ---------- */
-  var TABS = [["progress", "Progress", "進度"], ["roadmap", "Roadmap", "路線圖"], ["features", "Features", "功能"], ["structure", "Structure", "結構"]];
+  var TABS = [["progress", "Progress", "進度"], ["roadmap", "Roadmap", "路線圖"], ["features", "How to use", "怎麼使用"], ["structure", "Structure", "結構"]];
   var tabName = "progress", tabBtns = {};
   function writeHash() {
     var h = "#" + tabName + (tabName === "progress" && hasMs ? "/" + scope : "");

@@ -23,8 +23,10 @@ STATE.md.
 
 ## Update semantics
 
-SPEC.md     changes only through the spec gate, with approval. Rewrite what
-            no longer holds in place; never append a second spec.
+SPEC.md     changes only through the spec gate, with approval, except a
+            goal's How and Parts lines, written once its criteria all have
+            evidence. Rewrite what no longer holds in place; never append a
+            second spec.
 METHOD.md   accumulates. Correct a rule in place rather than appending a
             contradicting one. Deleting requires a stated reason.
 STATE.md    is replaced. Drop anything no longer true. git holds history.

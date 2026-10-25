@@ -25,7 +25,9 @@ project, not only the feature in hand:
     - M1: v1 — <one-line title>
     - M2: v2 — <title>
     ## Goals
-    - G1 (M1): ...
+    - G1 (M1): <a feature, in words a stranger understands>
+      - How: <written once it is done: how it was done, in plain words>
+      - Parts: C1, C2
     ## Acceptance criteria
     - AC1 (G1): <the criterion>
       - Means: <plain language: what this gives the user>
@@ -46,6 +48,14 @@ whatever needs saying about how a component uses another belongs in its
 responsibility.
 A goal with no milestone, a criterion with no goal, Means or Try, and a path that
 is not on disk are listed as gaps.
+
+Each goal is one feature on the progress page, done when every criterion that
+names it has evidence. The gate writes a goal without How and Parts. Those two
+lines record what was built rather than what was agreed, so they are the one
+part of SPEC.md written outside the gate: the moment a goal's criteria all
+have evidence, the agent adds How (a sentence or two a stranger can follow) and
+Parts (bare component ids, as uses takes). A done goal without How is listed as
+a gap.
 
 ## MODE: sprint
 
