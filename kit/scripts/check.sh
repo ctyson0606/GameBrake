@@ -87,6 +87,20 @@ for sr in "${STUB_ROOTS[@]}"; do
   else pass "$sr/agents: a stub for every agent"; fi
 done
 
+# --- skill and agent frontmatter parses -------------------------------------
+# A ": " on a continuation line of a description is read by YAML as a second
+# key, the frontmatter fails to parse, and the tool says nothing: it lists the
+# skill with its body as the description. Only a person reading the list sees it.
+badfm=""
+for f in "$ROOT"/kit/skills/*.md "$ROOT"/kit/agents/*.md "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md; do
+  [ -f "$f" ] || continue
+  if awk 'NR == 1 && !/^---/ { exit 1 } NR > 1 && /^---/ { exit 1 } NR > 1 && /^[ \t]/ && /: / { found = 1; exit 0 } END { exit found ? 0 : 1 }' "$f"; then
+    badfm="$badfm ${f#"$ROOT"/}"
+  fi
+done
+if [ -n "$badfm" ]; then fail "frontmatter with \": \" inside a value (YAML reads a second key):$badfm"
+else pass "skill and agent frontmatter has no stray \": \""; fi
+
 # --- no stub pointing at a canonical file that does not exist -------------
 dangling=""
 for sr in "${STUB_ROOTS[@]}"; do

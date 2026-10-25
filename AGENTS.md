@@ -55,8 +55,8 @@ T2  expensive — skipped when MODE is sprint
 
 Each entry below is kit/skills/<name>.md. Read the file, not this line.
 
-bootstrap — The one-time opening pass, run only while METHOD.md and STATE.md
-  are both still empty shells.
+bootstrap — The one-time opening pass, run while SPEC.md is still an empty
+  shell — where the code lives, MODE and TEAM, the Environment facts, the spec.
 spec-gate — What has to be settled before implementation starts, at a depth
   set by MODE.
 team-contract — The two things more than one person has to agree on once, and
