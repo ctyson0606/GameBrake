@@ -4,8 +4,9 @@ The contract this project is built against: what the spec gate produced and a
 person approved. It stays true for as long as the code does, so it is kept
 apart from STATE.md, which is replaced as the work moves.
 
-Change it only through the spec gate, never as you go. What no longer holds is
-rewritten in place, not appended to; git holds the history.
+Change it only through the spec gate, never as you go, except a goal's How and
+Parts lines, written once its criteria all have evidence. What no longer holds
+is rewritten in place, not appended to; git holds the history.
 
 ## Problem
 
@@ -18,16 +19,40 @@ charged again on every session.
 
 ## Milestones
 
+- M1: v1 — the cooldown brake
+
 ## Goals
 
-- G1  Every launch of a user-selected Windows executable is interrupted, and
-      that executable is kept from running for a cooldown (default 300 s).
-- G2  The cooldown is charged per play session — not once ever, not once per day.
-- G3  The protected set is editable at any time; any executable, not only games.
-- G4  Anything not on the list is completely unaffected.
-- G5  Starts with the Windows session; needs no manual arming.
-- G6  Waiting out a cooldown grants a time-limited permission to launch;
+- G1 (M1)  Every launch of a user-selected Windows executable is interrupted,
+      and that executable is kept from running for a cooldown (default 300 s).
+  - How: A WMI watcher reports every process start; its full path is matched
+    against the list, and a protected process is ended at once. The deadline
+    is written to state.json before the process is ended, so a reboot cannot
+    clear it, and the minutes left are drawn into the tray icon.
+  - Parts: C1, C2, C3
+- G2 (M1)  The cooldown is charged per play session — not once ever, not once per day.
+  - How: The reducer charges a cooldown when a session starts and returns the
+    application to idle when its process exits, so the next session pays
+    again. The whole policy is one pure function, tested without Windows.
+  - Parts: C1, C2
+- G3 (M1)  The protected set is editable at any time; any executable, not only games.
+  - How: The tray menu adds any .exe to the list, and config.json can be
+    edited by hand; it is reloaded the moment it is saved.
+  - Parts: C3, C1
+- G4 (M1)  Anything not on the list is completely unaffected.
+  - How: Only a full-path match is ever acted on, so nothing else is touched;
+    with nothing launching, the tray used no measurable CPU over a minute.
+  - Parts: C2
+- G5 (M1)  Starts with the Windows session; needs no manual arming.
+  - How: Start with Windows writes the installed copy's path into the HKCU
+    Run key, so the tray starts at sign-in.
+  - Parts: C3
+- G6 (M1)  Waiting out a cooldown grants a time-limited permission to launch;
       letting it expire costs a fresh cooldown.
+  - How: After the deadline the reducer opens a grace window measured from the
+    deadline itself; a launch inside it is let through and followed, one
+    after it pays a full cooldown.
+  - Parts: C1
 
 G6 is a goal rather than an implementation detail: without it the tool can be
 defeated by triggering every cooldown in the morning and playing freely after.
@@ -55,30 +80,34 @@ defeated by triggering every cooldown in the morning and playing freely after.
 
 ## Acceptance criteria
 
-- AC1   With C:\Windows\System32\charmap.exe protected, launching it closes it
+- AC1 (G1) With C:\Windows\System32\charmap.exe protected, launching it closes it
         within 2 s of the window appearing. The subject is a plain Win32
         executable on purpose: notepad.exe, which this criterion named until it
         was measured, is an app execution alias on Windows 11 and would let AC1
         pass while the window it was meant to close stayed open. See GOTCHAS.md.
-- AC2   A further launch attempt during the cooldown is closed the same way and
+- AC2 (G1) A further launch attempt during the cooldown is closed the same way and
         does not extend the remaining time.
-- AC3   After the cooldown elapses, a launch inside the grace window succeeds
+- AC3 (G6) After the cooldown elapses, a launch inside the grace window succeeds
         and runs indefinitely.
-- AC4   Letting the grace window expire without launching returns to the start:
+- AC4 (G6) Letting the grace window expire without launching returns to the start:
         the next launch is charged a full cooldown.
-- AC5   Quitting a permitted session and relaunching charges a fresh cooldown.
-- AC6   An unprotected app launches normally at every point above.
-- AC7   Rebooting mid-cooldown does not clear it — remaining time survives a
+- AC5 (G2) Quitting a permitted session and relaunching charges a fresh cooldown.
+- AC6 (G4) An unprotected app launches normally at every point above.
+- AC7 (G1) Rebooting mid-cooldown does not clear it — remaining time survives a
         restart of both the tool and Windows.
-- AC8   Remaining time is visible without hunting for it.
-- AC9   No measurable CPU when nothing is launching.
-- AC10  The reducer is exercised by tests with no Windows API and no real
+- AC8 (G1) Remaining time is visible without hunting for it.
+- AC9 (G4) No measurable CPU when nothing is launching.
+- AC10 (G2) The reducer is exercised by tests with no Windows API and no real
         process involved.
 
 AC4 and AC7 both assert that something does not happen, which is what makes
 them the two most likely to be silently skipped.
 
 ## Components
+
+- C1: Core (`src/GameBrake.Core`) — the cooldown rules as one pure function, and the config and state files
+- C2: Windows (`src/GameBrake.Windows`) — the process watcher, the terminator, and the engine that wires them to the rules; uses C1
+- C3: Tray (`src/GameBrake.Tray`) — the icon, the menu, the drawn countdown and autostart; uses C2
 
 ## Data and API contract
 
