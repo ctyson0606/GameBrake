@@ -373,9 +373,9 @@ resolve_section "$STATE" "Next Steps"          li > "$T/res.next"
 resolve_section "$STATE" "Open Questions"      > "$T/res.open"
 
 # --- STATE.md's Acceptance status lines ---------------------------------------------------------
-# "<id>: evidenced|claimed|not started - evidence (date)". Evidence is split
-# into its commands (inline code, never translated) and its result (the words
-# around them, which are). Output, joined by octal 037: S, id, status,
+# "<id>: evidenced|claimed|not started - evidence (date)". Evidence yields its
+# commands (the inline code) and its result (the whole text, commands inline,
+# translated around them). Output, joined by octal 037: S, id, status,
 # evidence, date, result, commands (joined by octal 036); or B and the raw line
 # when it cannot be read.
 : > "$T/status.units"
@@ -402,12 +402,13 @@ function norm(s) { gsub(/[ \t]+/, " ", s); sub(/^ /, "", s); sub(/ $/, "", s); r
   if (match(rest, /[(][0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][)]$/)) {
     date = substr(rest, RSTART + 1, 10); rest = trim(substr(rest, 1, RSTART - 1))
   }
+  # The result keeps its commands inline: cutting them out left sentences
+  # with holes ("passed ( : 29 passed"), and a translation keeps inline code
+  # as written anyway.
   n = split(rest, parts, "`")
   cmds = ""; res = rest
   if (n > 1 && n % 2 == 1) {
-    res = ""
-    for (k = 1; k <= n; k++) { if (k % 2 == 0) cmds = cmds (cmds == "" ? "" : "\036") parts[k]; else res = res " " parts[k] }
-    res = norm(res); sub(/^[,;:. ]+/, "", res)
+    for (k = 2; k <= n; k += 2) cmds = cmds (cmds == "" ? "" : "\036") parts[k]
   }
   print "S\037" id "\037" st "\037" rest "\037" date "\037" res "\037" cmds
 }' "$T/status.units" > "$T/status.parsed"
@@ -1693,7 +1694,8 @@ cat <<'EOF'
 
     s = dsec("Evidence", "證據");
     if (a.ev) {
-      a.cmds.forEach(function (c) { var pre = el("pre"); pre.appendChild(el("code", null, c)); s.appendChild(pre); });
+      // The commands stay inside the sentence that says what each one did; a
+      // list of them alone read as if every one had been run and passed.
       if (a.evr) { var r = el("div", "u"); r.appendChild(revealFrag(a.evr)); s.appendChild(r); }
       if (a.date) s.appendChild(el("div", "date", a.date));
     } else {
